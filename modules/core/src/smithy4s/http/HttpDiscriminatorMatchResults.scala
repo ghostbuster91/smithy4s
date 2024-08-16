@@ -16,12 +16,7 @@
 
 package smithy4s.http
 
-case class UnknownErrorResponse(
-    code: Int,
-    headers: Map[CaseInsensitive, Seq[String]],
-    body: String,
-    discriminatorMatchingInfo: List[String]
-) extends Throwable {
-  override def getMessage(): String =
-    s"status $code, headers: $headers, body:\n$body, discriminators: ${discriminatorMatchingInfo.mkString(", ")}"
-}
+final case class HttpDiscriminatorMatchResults(
+    failedToMatch: List[String],
+    discriminator: HttpDiscriminator
+)

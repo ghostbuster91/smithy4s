@@ -52,21 +52,45 @@ object HttpDiscriminator {
       discriminatingHeaderNames: List[String],
       statusCode: Int,
       headers: Map[CaseInsensitive, Seq[String]]
-  ): HttpDiscriminator = {
-    discriminatingHeaderNames.iterator
+  ): HttpDiscriminator = fromStatusOrHeaderWithResults(
+    discriminatingHeaderNames,
+    statusCode,
+    headers
+  ).discriminator
+
+  def fromStatusOrHeaderWithResults(
+      discriminatingHeaderNames: List[String],
+      statusCode: Int,
+      headers: Map[CaseInsensitive, Seq[String]]
+  ): HttpDiscriminatorMatchResults = {
+    val (reasons, discriminator) = discriminatingHeaderNames
       .map(CaseInsensitive(_))
-      .map(headers.get)
-      .collectFirst { case Some(h) => h }
-      .flatMap(_.headOption)
-      .map(errorType =>
-        ShapeId
-          .parse(errorType)
-          .map(FullId(_))
-          .getOrElse(NameOnly(errorType))
-      )
-      .getOrElse(
-        StatusCode(statusCode)
-      )
+      .foldLeft((List.empty[String], Option.empty[HttpDiscriminator])) {
+        (acc, item) =>
+          acc match {
+            case (info, None) =>
+              val header = headers
+                .get(item)
+                .flatMap(_.headOption)
+              header match {
+                case Some(errorType) =>
+                  (
+                    info,
+                    Some(
+                      ShapeId
+                        .parse(errorType)
+                        .map(FullId(_))
+                        .getOrElse(NameOnly(errorType))
+                    )
+                  )
+                case None =>
+                  (info :+ s"Cannot discriminate error by $item header due to missing response header", None)
+              }
+            case (reasons, header) => (reasons, header)
+          }
+      }
+
+    HttpDiscriminatorMatchResults(reasons, discriminator.getOrElse(StatusCode(statusCode)))
   }
 
 }

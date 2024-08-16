@@ -202,7 +202,7 @@ object HttpResponse {
         toStrict: Body => F[(Body, Blob)]
     ): Decoder[F, Body, E] =
       discriminating(
-        discriminate,
+        discriminate.andThen(df => MonadThrowLike[F].map(df)(d => (List.empty[String], d))),
         HttpErrorSelector(maybeErrorSchema, decoderCompiler),
         toStrict
       )
@@ -215,11 +215,11 @@ object HttpResponse {
     private[http] def forErrorAsThrowable[F[_]: MonadThrowLike, Body, E](
         maybeErrorSchema: Option[ErrorSchema[E]],
         decoderCompiler: CachedSchemaCompiler[Decoder[F, Body, *]],
-        discriminate: HttpResponse[Body] => F[HttpDiscriminator],
+        discriminate: HttpResponse[Body] => F[HttpDiscriminatorMatchResults],
         toStrict: Body => F[(Body, Blob)]
     ): Decoder[F, Body, Throwable] =
       discriminating(
-        discriminate,
+        discriminate.andThen(df => MonadThrowLike[F].map(df)(d => (d.failedToMatch, d.discriminator))),
         HttpErrorSelector.asThrowable(maybeErrorSchema, decoderCompiler),
         toStrict
       )
@@ -229,7 +229,7 @@ object HttpResponse {
     * to a given decoder, based on some discriminator.
     */
     private def discriminating[F[_], Body, Discriminator, E](
-        discriminate: HttpResponse[Body] => F[Discriminator],
+        discriminate: HttpResponse[Body] => F[(List[String], Discriminator)],
         select: Discriminator => Option[Decoder[F, Body, E]],
         toStrict: Body => F[(Body, Blob)]
     )(implicit F: MonadThrowLike[F]): Decoder[F, Body, E] =
@@ -237,7 +237,7 @@ object HttpResponse {
         def decode(response: HttpResponse[Body]): F[E] = {
           F.flatMap(toStrict(response.body)) { case (strictBody, bodyBlob) =>
             val strictResponse = response.copy(body = strictBody)
-            F.flatMap(discriminate(strictResponse)) { discriminator =>
+            F.flatMap(discriminate(strictResponse)) { case (failedToMatch, discriminator) =>
               select(discriminator) match {
                 case Some(decoder) => decoder.decode(strictResponse)
                 case None =>
@@ -245,7 +245,8 @@ object HttpResponse {
                     smithy4s.http.UnknownErrorResponse(
                       response.statusCode,
                       response.headers,
-                      bodyBlob.toUTF8String
+                      bodyBlob.toUTF8String,
+                      failedToMatch
                     )
                   )
               }

@@ -38,7 +38,7 @@ object HttpUnaryClientCodecs {
       requestBodyEncoders = BlobEncoder.noop,
       successResponseBodyDecoders = BlobDecoder.noop,
       errorResponseBodyDecoders = BlobDecoder.noop,
-      errorDiscriminator = _ => F.pure(HttpDiscriminator.Undetermined),
+      errorDiscriminator = _ => F.pure(HttpDiscriminatorMatchResults(List.empty, HttpDiscriminator.Undetermined)),
       metadataEncoders = None,
       metadataDecoders = None,
       rawStringsAndBlobPayloads = false,
@@ -56,6 +56,7 @@ object HttpUnaryClientCodecs {
     def withSuccessBodyDecoders(decoders: BlobDecoder.Compiler): Builder[F, Request, Response]
     def withErrorBodyDecoders(decoders: BlobDecoder.Compiler): Builder[F, Request, Response]
     def withErrorDiscriminator(f: HttpResponse[Blob] => F[HttpDiscriminator]): Builder[F, Request, Response]
+    def withErrorDiscriminator(f: HttpResponse[Blob] => F[HttpDiscriminatorMatchResults]): Builder[F, Request, Response]
     def withMetadataEncoders(encoders: Metadata.Encoder.Compiler): Builder[F, Request, Response]
     def withMetadataDecoders(decoders: Metadata.Decoder.Compiler): Builder[F, Request, Response]
     def withRawStringsAndBlobsPayloads: Builder[F, Request, Response]
@@ -73,7 +74,7 @@ object HttpUnaryClientCodecs {
       requestBodyEncoders: BlobEncoder.Compiler,
       successResponseBodyDecoders: BlobDecoder.Compiler,
       errorResponseBodyDecoders: BlobDecoder.Compiler,
-      errorDiscriminator: HttpResponse[Blob] => F[HttpDiscriminator],
+      errorDiscriminator: HttpResponse[Blob] => F[HttpDiscriminatorMatchResults],
       metadataEncoders: Option[Metadata.Encoder.Compiler],
       metadataDecoders: Option[Metadata.Decoder.Compiler],
       rawStringsAndBlobPayloads: Boolean,
@@ -95,6 +96,12 @@ object HttpUnaryClientCodecs {
     def withErrorBodyDecoders(decoders: BlobDecoder.Compiler): Builder[F, Request, Response] =
       copy(errorResponseBodyDecoders = decoders)
     def withErrorDiscriminator(f: HttpResponse[Blob] => F[HttpDiscriminator]): Builder[F, Request, Response] =
+      copy(errorDiscriminator =
+        f.andThen(df => MonadThrowLike[F].map(df)(d => HttpDiscriminatorMatchResults(List.empty, d)))
+      )
+    def withErrorDiscriminator(
+        f: HttpResponse[Blob] => F[HttpDiscriminatorMatchResults]
+    ): Builder[F, Request, Response] =
       copy(errorDiscriminator = f)
     def withMetadataEncoders(encoders: Metadata.Encoder.Compiler): Builder[F, Request, Response] =
       copy(metadataEncoders = Some(encoders))
@@ -212,7 +219,7 @@ object HttpUnaryClientCodecs {
             HttpResponse.Decoder.forErrorAsThrowable(
               endpoint.error,
               errorDecoders,
-              errorDiscriminator,
+              errorDiscriminator.andThen(df => MonadThrowLike[F].map(df)(_.discriminator)),
               toStrict
             )
           new UnaryClientCodecs(inputEncoder, errorDecoder.decode, outputDecoder.decode)
