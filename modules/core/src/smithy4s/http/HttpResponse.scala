@@ -203,7 +203,7 @@ object HttpResponse {
     ): Decoder[F, Body, E] =
       discriminating(
         discriminate,
-        HttpErrorSelector(maybeErrorSchema, decoderCompiler),
+        HttpErrorSelector.makeWithReason(maybeErrorSchema, decoderCompiler),
         toStrict
       )
 
@@ -220,7 +220,8 @@ object HttpResponse {
     ): Decoder[F, Body, Throwable] =
       discriminating(
         discriminate,
-        HttpErrorSelector.asThrowable(maybeErrorSchema, decoderCompiler),
+        HttpErrorSelector
+          .asThrowableWithReason(maybeErrorSchema, decoderCompiler),
         toStrict
       )
 
@@ -230,7 +231,7 @@ object HttpResponse {
     */
     private def discriminating[F[_], Body, Discriminator, E](
         discriminate: HttpResponse[Body] => F[Discriminator],
-        select: Discriminator => Option[Decoder[F, Body, E]],
+        select: Discriminator => Either[String, Decoder[F, Body, E]],
         toStrict: Body => F[(Body, Blob)]
     )(implicit F: MonadThrowLike[F]): Decoder[F, Body, E] =
       new Decoder[F, Body, E] {
@@ -239,13 +240,14 @@ object HttpResponse {
             val strictResponse = response.copy(body = strictBody)
             F.flatMap(discriminate(strictResponse)) { discriminator =>
               select(discriminator) match {
-                case Some(decoder) => decoder.decode(strictResponse)
-                case None =>
+                case Right(decoder) => decoder.decode(strictResponse)
+                case Left(errors) =>
                   F.raiseError(
                     smithy4s.http.UnknownErrorResponse(
                       response.statusCode,
                       response.headers,
-                      bodyBlob.toUTF8String
+                      bodyBlob.toUTF8String,
+                      errors
                     )
                   )
               }

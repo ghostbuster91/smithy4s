@@ -41,8 +41,14 @@ object HttpErrorSelector {
   def apply[F[_]: Covariant, E](
       maybeErrorSchema: Option[ErrorSchema[E]],
       compiler: CachedSchemaCompiler[F]
-  ): HttpDiscriminator => Option[F[E]] = maybeErrorSchema match {
-    case None => _ => None
+  ): HttpDiscriminator => Option[F[E]] =
+    makeWithReason(maybeErrorSchema, compiler).andThen(_.toOption)
+
+  def makeWithReason[F[_]: Covariant, E](
+      maybeErrorSchema: Option[ErrorSchema[E]],
+      compiler: CachedSchemaCompiler[F]
+  ): HttpDiscriminator => Either[String, F[E]] = maybeErrorSchema match {
+    case None => _ => Left("error schema not found")
     case Some(errorschema) =>
       new HttpErrorSelector[F, E](
         errorschema.alternatives,
@@ -61,21 +67,28 @@ object HttpErrorSelector {
   def asThrowable[F[_]: Covariant, E](
       maybeErrorSchema: Option[ErrorSchema[E]],
       compiler: CachedSchemaCompiler[F]
-  ): HttpDiscriminator => Option[F[Throwable]] = maybeErrorSchema match {
-    case None => _ => None
-    case Some(errorschema) =>
-      new HttpErrorSelector[F, E](
-        errorschema.alternatives,
-        compiler
-      ).andThen(_.map(Covariant[F].map(_)(errorschema.unliftError)))
-  }
+  ): HttpDiscriminator => Option[F[Throwable]] =
+    asThrowableWithReason(maybeErrorSchema, compiler).andThen(_.toOption)
+
+  def asThrowableWithReason[F[_]: Covariant, E](
+      maybeErrorSchema: Option[ErrorSchema[E]],
+      compiler: CachedSchemaCompiler[F]
+  ): HttpDiscriminator => Either[String, F[Throwable]] =
+    maybeErrorSchema match {
+      case None => _ => Left("error schema not found")
+      case Some(errorschema) =>
+        new HttpErrorSelector[F, E](
+          errorschema.alternatives,
+          compiler
+        ).andThen(_.map(Covariant[F].map(_)(errorschema.unliftError)))
+    }
 
 }
 
 private[http] final class HttpErrorSelector[F[_]: Covariant, E](
     alts: Vector[Alt[E, _]],
     compiler: CachedSchemaCompiler[F]
-) extends (HttpDiscriminator => Option[F[E]]) {
+) extends (HttpDiscriminator => Either[String, F[E]]) {
 
   type ConstF[A] = F[E]
   val cachedDecoders: PolyFunction[Alt[E, *], ConstF] =
@@ -101,7 +114,7 @@ private[http] final class HttpErrorSelector[F[_]: Covariant, E](
 
   def apply(
       discriminator: HttpDiscriminator
-  ): Option[F[E]] = {
+  ): Either[String, F[E]] = {
     val alt = getPreciseAlternative(discriminator)
     alt.map(cachedDecoders(_))
   }
@@ -170,13 +183,24 @@ private[http] final class HttpErrorSelector[F[_]: Covariant, E](
 
   private[http] def getPreciseAlternative(
       discriminator: HttpDiscriminator
-  ): Option[Alt[E, _]] = {
+  ): Either[String, Alt[E, _]] = {
     import HttpDiscriminator._
     discriminator match {
-      case FullId(shapeId) => byShapeId.get(shapeId)
-      case NameOnly(name)  => byName.get(name)
-      case StatusCode(int) => byStatusCode(int)
-      case Undetermined    => None
+      case FullId(shapeId) =>
+        byShapeId
+          .get(shapeId)
+          .map(Right(_))
+          .getOrElse(Left(s"Couldn't match by fullId: $shapeId"))
+      case NameOnly(name) =>
+        byName
+          .get(name)
+          .map(Right(_))
+          .getOrElse(Left(s"Couldn't match by name: $name"))
+      case StatusCode(int) =>
+        byStatusCode(int)
+          .map(Right(_))
+          .getOrElse(Left(s"Couldn't match by statucCode: $int"))
+      case Undetermined => Left("The error shape could not be determined")
     }
   }
 }
