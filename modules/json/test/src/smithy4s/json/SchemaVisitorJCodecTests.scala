@@ -406,6 +406,48 @@ class SchemaVisitorJCodecTests() extends FunSuite {
     expect.same(readFromString[Either[Int, String]](json2), Left(1))
   }
 
+  test("Invalid union decoding error") {
+    val json2 = """|{
+                   |  "left" : {"_test1_": "b"}
+                   |}
+                   |""".stripMargin
+
+    val schema = Schema.either(
+      Schema
+        .struct[String](
+          Schema.string
+            .required[String]("test1", identity)
+        )(identity),
+      Schema
+        .struct[String](
+          Schema.string
+            .required[String]("test2", identity)
+        )(identity)
+    )
+
+    val lenientCodec =
+      JsoniterCodecCompilerImpl.defaultJsoniterCodecCompiler.withLenientTaggedUnionDecoding
+        .fromSchema(schema)
+
+    expect.same(
+      Try(
+        readFromString[Either[String, String]](json2)(lenientCodec)
+      ).toEither.left.map(_.getMessage),
+      Left("Missing required field (path: .test1)")
+    )
+
+    val codec =
+      JsoniterCodecCompilerImpl.defaultJsoniterCodecCompiler
+        .fromSchema(schema)
+
+    expect.same(
+      Try(
+        readFromString[Either[String, String]](json2)(codec)
+      ).toEither.left.map(_.getMessage),
+      Left("Missing required field (path: .left.test1)")
+    )
+  }
+
   test("Untagged union are encoded / decoded") {
     val oneJ = """ {"three":"three_value"}"""
     val twoJ = """ {"four":4}"""
