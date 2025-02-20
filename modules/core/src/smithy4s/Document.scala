@@ -104,8 +104,8 @@ object Document {
 
   trait EncoderCompiler extends CachedSchemaCompiler[Encoder] {
     @deprecated(
-      message = "Use `withFieldRenderPredicateCompiler` instead",
-      since = "0.18.26"
+      message = "Use withFieldRenderPredicateCompiler instead",
+      since = "0.18.30"
     )
     def withExplicitDefaultsEncoding(
         explicitDefaultsEncoding: Boolean

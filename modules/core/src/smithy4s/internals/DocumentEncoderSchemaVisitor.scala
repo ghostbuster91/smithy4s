@@ -96,7 +96,6 @@ class DocumentEncoderSchemaVisitor(
   def this(cache: CompilationCache[DocumentEncoder]) =
     this(cache, explicitDefaultsEncoding = false)
 
-  @deprecated(message = "Don't use this method", since = "0.18.26")
   protected val explicitDefaultsEncoding: Boolean =
     fieldRenderPredicateCompiler == FieldRenderPredicateCompiler.NeverSkip
 

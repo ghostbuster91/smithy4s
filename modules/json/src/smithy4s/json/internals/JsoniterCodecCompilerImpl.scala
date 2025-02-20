@@ -38,8 +38,8 @@ private[smithy4s] case class JsoniterCodecCompilerImpl(
   def withMaxArity(max: Int): JsoniterCodecCompiler = copy(maxArity = max)
 
   @deprecated(
-    message = "Use `withFieldDefaultEncodingCompiler` instead",
-    since = "0.18.25"
+    message = "Use withFieldRenderPredicateCompiler instead",
+    since = "0.18.30"
   )
   def withExplicitDefaultsEncoding(
       explicitNulls: Boolean
