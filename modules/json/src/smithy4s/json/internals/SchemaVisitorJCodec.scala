@@ -1412,10 +1412,10 @@ private[smithy4s] class SchemaVisitorJCodec(
   ): (Z, JsonWriter) => Unit = {
     val codec = apply(field.schema)
     val jLabel = jsonLabel(field)
-    val shouldRender = fieldRenderPredicateCompiler.compile(field)
+    val shouldSkip = fieldRenderPredicateCompiler.compile(field)
     (z: Z, out: JsonWriter) =>
       val a = field.get(z)
-      if (shouldRender(a)) {
+      if (!shouldSkip(a)) {
         writeLabel(jLabel, out)
         codec.encodeValue(a, out)
       }

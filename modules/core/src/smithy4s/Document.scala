@@ -123,7 +123,7 @@ object Document {
   object Encoder
       extends CachedEncoderCompilerImpl(
         fieldRenderPredicateCompiler =
-          FieldRenderPredicateCompiler.IsNeitherEmptyOptionalNorDefaultOptional
+          FieldRenderPredicateCompiler.SkipIfEmptyOrDefaultOptionals
       )
 
   private[smithy4s] class CachedEncoderCompilerImpl(

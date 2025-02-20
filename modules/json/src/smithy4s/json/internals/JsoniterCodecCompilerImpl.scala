@@ -99,7 +99,7 @@ private[smithy4s] object JsoniterCodecCompilerImpl {
     JsoniterCodecCompilerImpl(
       maxArity = JsoniterCodecCompiler.defaultMaxArity,
       fieldRenderPredicateCompiler =
-        FieldRenderPredicateCompiler.IsNeitherEmptyOptionalNorDefaultOptional,
+        FieldRenderPredicateCompiler.SkipIfEmptyOrDefaultOptionals,
       infinitySupport = false,
       flexibleCollectionsSupport = false,
       preserveMapOrder = false,

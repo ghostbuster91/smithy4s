@@ -468,7 +468,7 @@ class DocumentSpec() extends FunSuite {
   ) {
     val result = Document.Encoder
       .withFieldRenderPredicateCompiler(
-        FieldRenderPredicateCompiler.AlwaysRender
+        FieldRenderPredicateCompiler.NeverSkip
       )
       .fromSchema(DefaultNullsOperationOutput.schema)
       .encode(DefaultNullsOperationOutput())
@@ -495,7 +495,7 @@ class DocumentSpec() extends FunSuite {
   ) {
     val result = Document.Encoder
       .withFieldRenderPredicateCompiler(
-        FieldRenderPredicateCompiler.IsNeitherEmptyOptionalNorDefaultOptional
+        FieldRenderPredicateCompiler.SkipIfEmptyOrDefaultOptionals
       )
       .fromSchema(
         DefaultNullsOperationOutput.schema
@@ -517,7 +517,7 @@ class DocumentSpec() extends FunSuite {
   ) {
     val result = Document.Encoder
       .withFieldRenderPredicateCompiler(
-        FieldRenderPredicateCompiler.IsNotAnEmptyOptional
+        FieldRenderPredicateCompiler.SkipIfEmptyOptionals
       )
       .fromSchema(DefaultNullsOperationOutput.schema)
       .encode(DefaultNullsOperationOutput())
@@ -543,7 +543,7 @@ class DocumentSpec() extends FunSuite {
   ) {
     val result = Document.Encoder
       .withFieldRenderPredicateCompiler(
-        FieldRenderPredicateCompiler.IsNotDefaultOptional
+        FieldRenderPredicateCompiler.SkipIfDefaultOptionals
       )
       .fromSchema(DefaultNullsOperationOutput.schema)
       .encode(DefaultNullsOperationOutput())
@@ -567,7 +567,7 @@ class DocumentSpec() extends FunSuite {
   ) {
     val result = Document.Encoder
       .withFieldRenderPredicateCompiler(
-        FieldRenderPredicateCompiler.AlwaysRender
+        FieldRenderPredicateCompiler.NeverSkip
       )
       .fromSchema(DefaultNullsOperationOutput.schema)
       .encode(
@@ -609,7 +609,7 @@ class DocumentSpec() extends FunSuite {
   ) {
     val result = Document.Encoder
       .withFieldRenderPredicateCompiler(
-        FieldRenderPredicateCompiler.IsNeitherEmptyOptionalNorDefaultOptional
+        FieldRenderPredicateCompiler.SkipIfEmptyOrDefaultOptionals
       )
       .fromSchema(DefaultNullsOperationOutput.schema)
       .encode(

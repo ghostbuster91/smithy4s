@@ -20,14 +20,14 @@ import smithy4s.schema.Field
 trait FieldRenderPredicateCompiler { self =>
   def compile[A](
       field: Field[?, A]
-  ): FieldRenderPredicateCompiler.ShouldRender[A]
+  ): FieldRenderPredicateCompiler.ShouldSkip[A]
 
   def &&(other: FieldRenderPredicateCompiler): FieldRenderPredicateCompiler =
     new FieldRenderPredicateCompiler {
 
       def compile[A](
           field: Field[?, A]
-      ): FieldRenderPredicateCompiler.ShouldRender[A] = {
+      ): FieldRenderPredicateCompiler.ShouldSkip[A] = {
         val r1 = self.compile(field)
         val r2 = other.compile(field)
         a => r1(a) && r2(a)
@@ -38,7 +38,7 @@ trait FieldRenderPredicateCompiler { self =>
 
       def compile[A](
           field: Field[?, A]
-      ): FieldRenderPredicateCompiler.ShouldRender[A] = {
+      ): FieldRenderPredicateCompiler.ShouldSkip[A] = {
         val r1 = self.compile(field)
         val r2 = other.compile(field)
         a => r1(a) || r2(a)
@@ -48,50 +48,50 @@ trait FieldRenderPredicateCompiler { self =>
 
 object FieldRenderPredicateCompiler {
 
-  type ShouldRender[A] = A => Boolean
+  type ShouldSkip[A] = A => Boolean
 
   trait OptionalPredicate extends FieldRenderPredicateCompiler {
 
     final def compile[A](
         field: Field[?, A]
-    ): FieldRenderPredicateCompiler.ShouldRender[A] = {
-      if (field.isRequired) Function.const(true)
+    ): FieldRenderPredicateCompiler.ShouldSkip[A] = {
+      if (field.isRequired) Function.const(false)
       else compileOptional(field)
 
     }
 
     def compileOptional[A](
         field: Field[?, A]
-    ): FieldRenderPredicateCompiler.ShouldRender[A]
+    ): FieldRenderPredicateCompiler.ShouldSkip[A]
 
   }
 
-  val AlwaysRender = new FieldRenderPredicateCompiler {
-    def compile[A](field: Field[_, A]): ShouldRender[A] = Function.const(true)
+  val NeverSkip = new FieldRenderPredicateCompiler {
+    def compile[A](field: Field[_, A]): ShouldSkip[A] = Function.const(false)
   }
 
-  val IsNotDefaultOptional =
+  val SkipIfDefaultOptionals =
     new FieldRenderPredicateCompiler.OptionalPredicate {
-      def compileOptional[A](field: Field[?, A]): ShouldRender[A] = {
+      def compileOptional[A](field: Field[?, A]): ShouldSkip[A] = {
         // Optional fields have None as their default, so we need to make sure not to skip them here
-        a => a == None || !field.isDefaultValue(a)
+        a => a != None && field.isDefaultValue(a)
       }
     }
 
-  val IsNotAnEmptyOptional =
+  val SkipIfEmptyOptionals =
     new FieldRenderPredicateCompiler.OptionalPredicate {
-      def compileOptional[A](field: Field[?, A]): ShouldRender[A] = { a =>
-        a != None
+      def compileOptional[A](field: Field[?, A]): ShouldSkip[A] = { a =>
+        a == None
       }
     }
 
-  val IsNeitherEmptyOptionalNorDefaultOptional =
-    IsNotAnEmptyOptional && IsNotDefaultOptional
+  val SkipIfEmptyOrDefaultOptionals =
+    SkipIfEmptyOptionals || SkipIfDefaultOptionals
 
   def fromExplicitDefaults(
       explicitDefaultsEncoding: Boolean
   ): FieldRenderPredicateCompiler = {
-    if (explicitDefaultsEncoding) AlwaysRender
-    else IsNeitherEmptyOptionalNorDefaultOptional
+    if (explicitDefaultsEncoding) NeverSkip
+    else SkipIfEmptyOrDefaultOptionals
   }
 }

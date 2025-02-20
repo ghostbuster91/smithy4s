@@ -98,7 +98,7 @@ class DocumentEncoderSchemaVisitor(
 
   @deprecated(message = "Don't use this method", since = "0.18.26")
   protected val explicitDefaultsEncoding: Boolean =
-    fieldRenderPredicateCompiler == FieldRenderPredicateCompiler.AlwaysRender
+    fieldRenderPredicateCompiler == FieldRenderPredicateCompiler.NeverSkip
 
   override def primitive[P](
       shapeId: ShapeId,
@@ -235,10 +235,10 @@ class DocumentEncoderSchemaVisitor(
         .get(JsonName)
         .map(_.value)
         .getOrElse(field.label)
-      val shouldRender = fieldRenderPredicateCompiler.compile(field)
+      val shouldSkip = fieldRenderPredicateCompiler.compile(field)
       (s, builder) =>
         val value = field.get(s)
-        if (shouldRender(value)) {
+        if (!shouldSkip(value)) {
           builder.+=(jsonLabel -> encoder.apply(value))
         }
     }
@@ -247,10 +247,10 @@ class DocumentEncoderSchemaVisitor(
         field: Field[S, A]
     ): (S, Builder[(String, Document), Map[String, Document]]) => Unit = {
       val encoder = apply(field.schema)
-      val shouldRender = fieldRenderPredicateCompiler.compile(field)
+      val shouldSkip = fieldRenderPredicateCompiler.compile(field)
       (s, builder) => {
         val value = field.get(s)
-        if (shouldRender(value)) {
+        if (!shouldSkip(value)) {
           encoder(value) match {
             case Document.DObject(value) => value.foreach(builder += _)
             case _ =>
