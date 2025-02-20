@@ -44,7 +44,9 @@ private[smithy4s] case class JsoniterCodecCompilerImpl(
   def withExplicitDefaultsEncoding(
       explicitNulls: Boolean
   ): JsoniterCodecCompiler =
-    withFieldRenderPredicateCompiler(FieldRenderPredicateCompiler.fromExplicitDefaults(explicitNulls))
+    withFieldRenderPredicateCompiler(
+      FieldRenderPredicateCompiler.fromExplicitDefaults(explicitNulls)
+    )
 
   def withFieldRenderPredicateCompiler(
       fieldRenderPredicateCompiler: FieldRenderPredicateCompiler

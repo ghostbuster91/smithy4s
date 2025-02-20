@@ -1203,6 +1203,108 @@ class DocumentSpec() extends FunSuite {
     )
   }
 
+  test("should render by default required list even if it is empty") {
+    case class MyStruct(
+        items: List[String]
+    )
+    val arr = list(string).required[MyStruct]("items", _.items)
+    val structSchema = struct(arr)(MyStruct.apply)
+
+    val result = Document.Encoder
+      .withFieldRenderPredicateCompiler(
+        FieldRenderPredicateCompiler.NeverSkip
+      )
+      .fromSchema(structSchema)
+      .encode(MyStruct(List.empty))
+
+    expect.same(
+      Document.obj(
+        "items" -> Document.array()
+      ),
+      result
+    )
+  }
+
+  test("should skip rendering of required lists if it is empty and SkipIfEmptyCollection is used") {
+    case class MyStruct(
+        items: List[String]
+    )
+    val arr = list(string).required[MyStruct]("items", _.items)
+    val structSchema = struct(arr)(MyStruct.apply)
+
+    val result = Document.Encoder
+      .withFieldRenderPredicateCompiler(
+        FieldRenderPredicateCompiler.SkipIfEmptyCollection
+      )
+      .fromSchema(structSchema)
+      .encode(MyStruct(List.empty))
+
+    expect.same(
+      Document.obj(),
+      result
+    )
+  }
+
+  test("should skip rendering of optional lists if it is empty and SkipIfEmptyCollection is used") {
+    case class MyStruct(
+        items: Option[List[String]]
+    )
+    val arr = list(string).optional[MyStruct]("items", _.items)
+    val structSchema = struct(arr)(MyStruct.apply)
+
+    val result = Document.Encoder
+      .withFieldRenderPredicateCompiler(
+        FieldRenderPredicateCompiler.SkipIfEmptyCollection
+      )
+      .fromSchema(structSchema)
+      .encode(MyStruct(Some(List.empty)))
+
+    expect.same(
+      Document.obj(),
+      result
+    )
+  }
+
+  test("should not skip rendering of required lists if it is empty and SkipIfEmptyOptionalCollection is used") {
+    case class MyStruct(
+        items: List[String]
+    )
+    val arr = list(string).required[MyStruct]("items", _.items)
+    val structSchema = struct(arr)(MyStruct.apply)
+
+    val result = Document.Encoder
+      .withFieldRenderPredicateCompiler(
+        FieldRenderPredicateCompiler.SkipIfEmptyOptionalCollection
+      )
+      .fromSchema(structSchema)
+      .encode(MyStruct(List.empty))
+
+    expect.same(
+      Document.obj("items" -> Document.array()),
+      result
+    )
+  }
+
+  test("should skip rendering of optional lists if it is empty and SkipIfEmptyOptionalCollection is used") {
+    case class MyStruct(
+        items: Option[List[String]]
+    )
+    val arr = list(string).optional[MyStruct]("items", _.items)
+    val structSchema = struct(arr)(MyStruct.apply)
+
+    val result = Document.Encoder
+      .withFieldRenderPredicateCompiler(
+        FieldRenderPredicateCompiler.SkipIfEmptyOptionalCollection
+      )
+      .fromSchema(structSchema)
+      .encode(MyStruct(Some(List.empty)))
+
+    expect.same(
+      Document.obj(),
+      result
+    )
+  }
+
   private def inside[A, B](
       a: A
   )(assertPF: PartialFunction[A, Unit])(implicit loc: munit.Location) = {

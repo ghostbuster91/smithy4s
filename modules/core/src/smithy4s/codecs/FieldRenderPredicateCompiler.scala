@@ -16,24 +16,16 @@
 package smithy4s.codecs
 
 import smithy4s.schema.Field
+import smithy4s.schema.Schema
 
 trait FieldRenderPredicateCompiler { self =>
   def compile[A](
       field: Field[?, A]
   ): FieldRenderPredicateCompiler.ShouldSkip[A]
 
-  def &&(other: FieldRenderPredicateCompiler): FieldRenderPredicateCompiler =
-    new FieldRenderPredicateCompiler {
-
-      def compile[A](
-          field: Field[?, A]
-      ): FieldRenderPredicateCompiler.ShouldSkip[A] = {
-        val r1 = self.compile(field)
-        val r2 = other.compile(field)
-        a => r1(a) && r2(a)
-      }
-    }
-  def ||(other: FieldRenderPredicateCompiler): FieldRenderPredicateCompiler =
+  def combine(
+      other: FieldRenderPredicateCompiler
+  ): FieldRenderPredicateCompiler =
     new FieldRenderPredicateCompiler {
 
       def compile[A](
@@ -70,6 +62,51 @@ object FieldRenderPredicateCompiler {
     def compile[A](field: Field[_, A]): ShouldSkip[A] = Function.const(false)
   }
 
+  private def asEmptyCollectionPredicate[F[_]](
+      schema: Schema[_]
+  ): Option[Any => Boolean] = {
+    import Schema._
+    schema match {
+      case c: CollectionSchema[f, a] =>
+        Some(collection => c.tag.isEmpty(collection.asInstanceOf[f[a]]))
+      case BijectionSchema(inner, _)  => asEmptyCollectionPredicate(inner)
+      case RefinementSchema(inner, _) => asEmptyCollectionPredicate(inner)
+      case OptionSchema(inner) =>
+        asEmptyCollectionPredicate(inner)
+          .map(predicate =>
+            wrappedCollection =>
+              wrappedCollection.asInstanceOf[Option[Any]].exists(predicate)
+          )
+      case LazySchema(_)           => None // ?
+      case _: MapSchema[k, v]      => None
+      case _: EnumerationSchema[_] => None
+      case _: StructSchema[_]      => None
+      case _: UnionSchema[_]       => None
+      case _: PrimitiveSchema[_]   => None
+    }
+  }
+
+  val SkipIfEmptyOptionalCollection =
+    new FieldRenderPredicateCompiler.OptionalPredicate {
+
+      def compileOptional[A](field: Field[?, A]): ShouldSkip[A] = {
+        asEmptyCollectionPredicate(field.schema) match {
+          case None          => Function.const(false)
+          case Some(isEmpty) => isEmpty
+        }
+      }
+    }
+
+  val SkipIfEmptyCollection = new FieldRenderPredicateCompiler {
+
+    def compile[A](field: Field[_, A]): ShouldSkip[A] = {
+      asEmptyCollectionPredicate(field.schema) match {
+        case None          => Function.const(false)
+        case Some(isEmpty) => isEmpty
+      }
+    }
+  }
+
   val SkipIfDefaultOptionals =
     new FieldRenderPredicateCompiler.OptionalPredicate {
       def compileOptional[A](field: Field[?, A]): ShouldSkip[A] = {
@@ -86,7 +123,7 @@ object FieldRenderPredicateCompiler {
     }
 
   val SkipIfEmptyOrDefaultOptionals =
-    SkipIfEmptyOptionals || SkipIfDefaultOptionals
+    SkipIfEmptyOptionals combine SkipIfDefaultOptionals
 
   def fromExplicitDefaults(
       explicitDefaultsEncoding: Boolean
