@@ -26,6 +26,7 @@ import smithy4s.example.DefaultNullsOperationOutput
 import alloy.Untagged
 import smithy4s.example.TimestampOperationInput
 import scala.util.Try
+import smithy4s.codecs.FieldRenderPredicateCompiler
 
 class DocumentSpec() extends FunSuite {
 
@@ -466,11 +467,12 @@ class DocumentSpec() extends FunSuite {
     "document encoder - all default values + explicit defaults encoding = true"
   ) {
     val result = Document.Encoder
-      .withExplicitDefaultsEncoding(true)
-      .fromSchema(
-        DefaultNullsOperationOutput.schema
+      .withFieldRenderPredicateCompiler(
+        FieldRenderPredicateCompiler.AlwaysRender
       )
+      .fromSchema(DefaultNullsOperationOutput.schema)
       .encode(DefaultNullsOperationOutput())
+
     expect.same(
       Document.obj(
         "optional" -> Document.nullDoc,
@@ -492,7 +494,9 @@ class DocumentSpec() extends FunSuite {
     "document encoder - all default values + explicit defaults encoding = false"
   ) {
     val result = Document.Encoder
-      .withExplicitDefaultsEncoding(false)
+      .withFieldRenderPredicateCompiler(
+        FieldRenderPredicateCompiler.IsNeitherEmptyOptionalNorDefaultOptional
+      )
       .fromSchema(
         DefaultNullsOperationOutput.schema
       )
@@ -509,10 +513,62 @@ class DocumentSpec() extends FunSuite {
   }
 
   test(
+    "document encoder - FieldRenderPredicateCompiler.SkipEmptyOptionals and keep defaults"
+  ) {
+    val result = Document.Encoder
+      .withFieldRenderPredicateCompiler(
+        FieldRenderPredicateCompiler.IsNotAnEmptyOptional
+      )
+      .fromSchema(DefaultNullsOperationOutput.schema)
+      .encode(DefaultNullsOperationOutput())
+
+    expect.same(
+      Document.obj(
+        "optionalWithDefault" -> Document.fromString("optional-default"),
+        "requiredWithDefault" -> Document.fromString("required-default"),
+        "optionalHeaderWithDefault" -> Document.fromString(
+          "optional-header-with-default"
+        ),
+        "requiredHeaderWithDefault" -> Document.fromString(
+          "required-header-with-default"
+        )
+      ),
+      result
+    )
+
+  }
+
+  test(
+    "document encoder - FieldRenderPredicateCompiler.SkipEmptyOptionals and keep defaults"
+  ) {
+    val result = Document.Encoder
+      .withFieldRenderPredicateCompiler(
+        FieldRenderPredicateCompiler.IsNotDefaultOptional
+      )
+      .fromSchema(DefaultNullsOperationOutput.schema)
+      .encode(DefaultNullsOperationOutput())
+
+    expect.same(
+      Document.obj(
+        "optional" -> Document.nullDoc,
+        "optionalHeader" -> Document.nullDoc,
+        "requiredWithDefault" -> Document.fromString("required-default"),
+        "requiredHeaderWithDefault" -> Document.fromString(
+          "required-header-with-default"
+        )
+      ),
+      result
+    )
+
+  }
+
+  test(
     "document encoder - default values overrides + explicit defaults encoding = true"
   ) {
     val result = Document.Encoder
-      .withExplicitDefaultsEncoding(true)
+      .withFieldRenderPredicateCompiler(
+        FieldRenderPredicateCompiler.AlwaysRender
+      )
       .fromSchema(DefaultNullsOperationOutput.schema)
       .encode(
         DefaultNullsOperationOutput(
@@ -552,7 +608,9 @@ class DocumentSpec() extends FunSuite {
     "document encoder - default values overrides + explicit defaults encoding = false"
   ) {
     val result = Document.Encoder
-      .withExplicitDefaultsEncoding(false)
+      .withFieldRenderPredicateCompiler(
+        FieldRenderPredicateCompiler.IsNeitherEmptyOptionalNorDefaultOptional
+      )
       .fromSchema(DefaultNullsOperationOutput.schema)
       .encode(
         DefaultNullsOperationOutput(
@@ -586,7 +644,6 @@ class DocumentSpec() extends FunSuite {
       ),
       result
     )
-
   }
 
   test("Document encoder - timestamp defaults") {

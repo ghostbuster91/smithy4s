@@ -19,16 +19,17 @@ package internals
 
 import smithy4s.HintMask
 import smithy4s.schema._
+import smithy4s.codecs.FieldRenderPredicateCompiler
 
 private[smithy4s] case class JsoniterCodecCompilerImpl(
     maxArity: Int,
-    explicitDefaultsEncoding: Boolean,
     flexibleCollectionsSupport: Boolean,
     infinitySupport: Boolean,
     preserveMapOrder: Boolean,
     hintMask: Option[HintMask],
     lenientTaggedUnionDecoding: Boolean,
-    lenientNumericDecoding: Boolean
+    lenientNumericDecoding: Boolean,
+    fieldRenderPredicateCompiler: FieldRenderPredicateCompiler
 ) extends CachedSchemaCompiler.Impl[JCodec]
     with JsoniterCodecCompiler {
 
@@ -36,10 +37,19 @@ private[smithy4s] case class JsoniterCodecCompilerImpl(
 
   def withMaxArity(max: Int): JsoniterCodecCompiler = copy(maxArity = max)
 
+  @deprecated(
+    message = "Use `withFieldDefaultEncodingCompiler` instead",
+    since = "0.18.25"
+  )
   def withExplicitDefaultsEncoding(
-      explicitDefaultsEncoding: Boolean
+      explicitNulls: Boolean
   ): JsoniterCodecCompiler =
-    copy(explicitDefaultsEncoding = explicitDefaultsEncoding)
+    withFieldRenderPredicateCompiler(FieldRenderPredicateCompiler.fromExplicitDefaults(explicitNulls))
+
+  def withFieldRenderPredicateCompiler(
+      fieldRenderPredicateCompiler: FieldRenderPredicateCompiler
+  ): JsoniterCodecCompiler =
+    copy(fieldRenderPredicateCompiler = fieldRenderPredicateCompiler)
 
   def withHintMask(hintMask: HintMask): JsoniterCodecCompiler =
     copy(hintMask = Some(hintMask))
@@ -66,13 +76,13 @@ private[smithy4s] case class JsoniterCodecCompilerImpl(
   def fromSchema[A](schema: Schema[A], cache: Cache): JCodec[A] = {
     val visitor = new SchemaVisitorJCodec(
       maxArity,
-      explicitDefaultsEncoding,
       infinitySupport,
       flexibleCollectionsSupport,
       preserveMapOrder,
       lenientTaggedUnionDecoding,
       lenientNumericDecoding,
-      cache
+      cache,
+      fieldRenderPredicateCompiler
     )
     val amendedSchema =
       hintMask
@@ -88,7 +98,8 @@ private[smithy4s] object JsoniterCodecCompilerImpl {
   val defaultJsoniterCodecCompiler: JsoniterCodecCompiler =
     JsoniterCodecCompilerImpl(
       maxArity = JsoniterCodecCompiler.defaultMaxArity,
-      explicitDefaultsEncoding = false,
+      fieldRenderPredicateCompiler =
+        FieldRenderPredicateCompiler.IsNeitherEmptyOptionalNorDefaultOptional,
       infinitySupport = false,
       flexibleCollectionsSupport = false,
       preserveMapOrder = false,

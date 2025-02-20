@@ -21,6 +21,7 @@ import smithy4s.schema.CachedSchemaCompiler
 import internals.DocumentDecoderSchemaVisitor
 import internals.DocumentEncoderSchemaVisitor
 import smithy4s.codecs.PayloadError
+import smithy4s.codecs.FieldRenderPredicateCompiler
 
 /**
   * A json-like free-form structure serving as a model for
@@ -102,16 +103,31 @@ object Document {
   }
 
   trait EncoderCompiler extends CachedSchemaCompiler[Encoder] {
+    @deprecated(
+      message = "Use `withFieldRenderPredicateCompiler` instead",
+      since = "0.18.26"
+    )
     def withExplicitDefaultsEncoding(
         explicitDefaultsEncoding: Boolean
+    ): EncoderCompiler = withFieldRenderPredicateCompiler(
+      FieldRenderPredicateCompiler.fromExplicitDefaults(
+        explicitDefaultsEncoding
+      )
+    )
+
+    def withFieldRenderPredicateCompiler(
+        fieldRenderPredicateCompiler: FieldRenderPredicateCompiler
     ): EncoderCompiler
   }
 
   object Encoder
-      extends CachedEncoderCompilerImpl(explicitDefaultsEncoding = false)
+      extends CachedEncoderCompilerImpl(
+        fieldRenderPredicateCompiler =
+          FieldRenderPredicateCompiler.IsNeitherEmptyOptionalNorDefaultOptional
+      )
 
   private[smithy4s] class CachedEncoderCompilerImpl(
-      explicitDefaultsEncoding: Boolean
+      fieldRenderPredicateCompiler: FieldRenderPredicateCompiler
   ) extends CachedSchemaCompiler.DerivingImpl[Encoder]
       with EncoderCompiler {
 
@@ -123,7 +139,7 @@ object Document {
     ): Encoder[A] = {
       val makeEncoder =
         schema.compile(
-          new DocumentEncoderSchemaVisitor(cache, explicitDefaultsEncoding)
+          new DocumentEncoderSchemaVisitor(cache, fieldRenderPredicateCompiler)
         )
       new Encoder[A] {
         def encode(a: A): Document = {
@@ -132,10 +148,10 @@ object Document {
       }
     }
 
-    def withExplicitDefaultsEncoding(
-        explicitDefaultsEncoding: Boolean
+    def withFieldRenderPredicateCompiler(
+        fieldRenderPredicateCompiler: FieldRenderPredicateCompiler
     ): EncoderCompiler = new CachedEncoderCompilerImpl(
-      explicitDefaultsEncoding = explicitDefaultsEncoding
+      fieldRenderPredicateCompiler
     )
   }
 

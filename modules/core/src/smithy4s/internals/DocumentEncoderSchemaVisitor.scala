@@ -45,6 +45,7 @@ import smithy4s.schema.Primitive.PDouble
 import smithy4s.schema.Primitive.PLong
 import smithy4s.schema.Primitive.PString
 import alloy.Untagged
+import smithy4s.codecs.FieldRenderPredicateCompiler
 
 trait DocumentEncoder[A] { self =>
 
@@ -76,12 +77,28 @@ object DocumentEncoder {
 
 class DocumentEncoderSchemaVisitor(
     val cache: CompilationCache[DocumentEncoder],
-    val explicitDefaultsEncoding: Boolean
+    val fieldRenderPredicateCompiler: FieldRenderPredicateCompiler
 ) extends SchemaVisitor.Cached[DocumentEncoder] {
   self =>
 
+  def this(
+      cache: CompilationCache[DocumentEncoder],
+      explicitDefaultsEncoding: Boolean
+  ) =
+    this(
+      cache,
+      fieldRenderPredicateCompiler =
+        FieldRenderPredicateCompiler.fromExplicitDefaults(
+          explicitDefaultsEncoding
+        )
+    )
+
   def this(cache: CompilationCache[DocumentEncoder]) =
     this(cache, explicitDefaultsEncoding = false)
+
+  @deprecated(message = "Don't use this method", since = "0.18.26")
+  protected val explicitDefaultsEncoding: Boolean =
+    fieldRenderPredicateCompiler == FieldRenderPredicateCompiler.AlwaysRender
 
   override def primitive[P](
       shapeId: ShapeId,
@@ -218,37 +235,28 @@ class DocumentEncoderSchemaVisitor(
         .get(JsonName)
         .map(_.value)
         .getOrElse(field.label)
+      val shouldRender = fieldRenderPredicateCompiler.compile(field)
       (s, builder) =>
-        if (explicitDefaultsEncoding) {
-          builder.+=(jsonLabel -> encoder.apply(field.get(s)))
-        } else
-          field.getUnlessDefault(s).foreach { value =>
-            builder.+=(jsonLabel -> encoder.apply(value))
-          }
+        val value = field.get(s)
+        if (shouldRender(value)) {
+          builder.+=(jsonLabel -> encoder.apply(value))
+        }
     }
 
     def jsonUnknownFieldEncoder[A](
         field: Field[S, A]
     ): (S, Builder[(String, Document), Map[String, Document]]) => Unit = {
       val encoder = apply(field.schema)
+      val shouldRender = fieldRenderPredicateCompiler.compile(field)
       (s, builder) => {
-        if (explicitDefaultsEncoding) {
-          encoder(field.get(s)) match {
+        val value = field.get(s)
+        if (shouldRender(value)) {
+          encoder(value) match {
             case Document.DObject(value) => value.foreach(builder += _)
             case _ =>
               throw new IllegalArgumentException(
                 s"Failed encoding field ${field.label} because it cannot be converted to a JSON object"
               )
-          }
-        } else {
-          field.foreachUnlessDefault(s) { a =>
-            encoder(a) match {
-              case Document.DObject(value) => value.foreach(builder += _)
-              case _ =>
-                throw new IllegalArgumentException(
-                  s"Failed encoding field ${field.label} because it cannot be converted to a JSON object"
-                )
-            }
           }
         }
       }
