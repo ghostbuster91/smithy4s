@@ -69,15 +69,21 @@ object FieldSkipCompiler {
   ): Option[A => Boolean] = {
     import Schema._
     schema match {
-      case c: CollectionSchema[f, a] =>
-        Some(collection => c.tag.isEmpty(collection.asInstanceOf[f[a]]))
-      case BijectionSchema(inner, _)  => asEmptyCollectionPredicate(inner.asInstanceOf[Schema[Any]])
-      case RefinementSchema(inner, _) => asEmptyCollectionPredicate(inner.asInstanceOf[Schema[Any]])
-      case OptionSchema(inner) =>
-        asEmptyCollectionPredicate(inner.asInstanceOf[Schema[Any]])
-          .map(predicate =>
-            wrappedCollection =>
-              wrappedCollection.asInstanceOf[Option[Any]].exists(predicate)
+      case c: CollectionSchema[f, A @unchecked] =>
+        Some(collectionA => c.tag.isEmpty(collectionA.asInstanceOf[f[A]]))
+      case b: BijectionSchema[inner, A @unchecked] =>
+        asEmptyCollectionPredicate[F, inner](b.underlying).map(predicateInner =>
+          collectionA => predicateInner(b.bijection.from(collectionA))
+        )
+      case r: RefinementSchema[inner, A @unchecked] =>
+        asEmptyCollectionPredicate[F, inner](r.underlying).map(predicateInner =>
+          collectionA => predicateInner(r.refinement.from(collectionA))
+        )
+      case o: OptionSchema[inner] =>
+        asEmptyCollectionPredicate(o.underlying)
+          .map(predicateInner =>
+            collectionA =>
+              collectionA.asInstanceOf[Option[inner]].exists(predicateInner)
           )
       case LazySchema(_)           => None // ?
       case _: MapSchema[k, v]      => None
