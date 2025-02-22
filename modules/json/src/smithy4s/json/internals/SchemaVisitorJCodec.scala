@@ -39,7 +39,7 @@ import scala.collection.immutable.VectorBuilder
 import scala.collection.mutable.ListBuffer
 import scala.collection.mutable.{Map => MMap}
 import scala.collection.immutable.ListMap
-import smithy4s.codecs.FieldRenderPredicateCompiler
+import smithy4s.codecs.FieldSkipCompiler
 
 private[smithy4s] class SchemaVisitorJCodec(
     maxArity: Int,
@@ -49,7 +49,7 @@ private[smithy4s] class SchemaVisitorJCodec(
     lenientTaggedUnionDecoding: Boolean,
     lenientNumericDecoding: Boolean,
     val cache: CompilationCache[JCodec],
-    fieldRenderPredicateCompiler: FieldRenderPredicateCompiler
+    fieldSkipCompiler: FieldSkipCompiler
 ) extends SchemaVisitor.Cached[JCodec] { self =>
   private val emptyMetadata: MMap[String, Any] = MMap.empty
 
@@ -1412,7 +1412,7 @@ private[smithy4s] class SchemaVisitorJCodec(
   ): (Z, JsonWriter) => Unit = {
     val codec = apply(field.schema)
     val jLabel = jsonLabel(field)
-    val shouldSkip = fieldRenderPredicateCompiler.compile(field)
+    val shouldSkip = fieldSkipCompiler.compile(field)
     (z: Z, out: JsonWriter) =>
       val a = field.get(z)
       if (!shouldSkip(a)) {

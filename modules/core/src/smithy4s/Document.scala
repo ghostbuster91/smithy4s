@@ -21,7 +21,7 @@ import smithy4s.schema.CachedSchemaCompiler
 import internals.DocumentDecoderSchemaVisitor
 import internals.DocumentEncoderSchemaVisitor
 import smithy4s.codecs.PayloadError
-import smithy4s.codecs.FieldRenderPredicateCompiler
+import smithy4s.codecs.FieldSkipCompiler
 
 /**
   * A json-like free-form structure serving as a model for
@@ -104,29 +104,28 @@ object Document {
 
   trait EncoderCompiler extends CachedSchemaCompiler[Encoder] {
     @deprecated(
-      message = "Use withFieldRenderPredicateCompiler instead",
+      message = "Use withFieldSkipCompiler instead",
       since = "0.18.30"
     )
     def withExplicitDefaultsEncoding(
         explicitDefaultsEncoding: Boolean
-    ): EncoderCompiler = withFieldRenderPredicateCompiler(
-      if (explicitDefaultsEncoding) FieldRenderPredicateCompiler.NeverSkip
-      else FieldRenderPredicateCompiler.SkipIfEmptyOrDefaultOptionals
+    ): EncoderCompiler = withFieldSkipCompiler(
+      if (explicitDefaultsEncoding) FieldSkipCompiler.NeverSkip
+      else FieldSkipCompiler.SkipIfEmptyOrDefaultOptionals
     )
 
-    def withFieldRenderPredicateCompiler(
-        fieldRenderPredicateCompiler: FieldRenderPredicateCompiler
+    def withFieldSkipCompiler(
+        fieldSkipCompiler: FieldSkipCompiler
     ): EncoderCompiler
   }
 
   object Encoder
       extends CachedEncoderCompilerImpl(
-        fieldRenderPredicateCompiler =
-          FieldRenderPredicateCompiler.SkipIfEmptyOrDefaultOptionals
+        fieldSkipCompiler = FieldSkipCompiler.SkipIfEmptyOrDefaultOptionals
       )
 
   private[smithy4s] class CachedEncoderCompilerImpl(
-      fieldRenderPredicateCompiler: FieldRenderPredicateCompiler
+      fieldSkipCompiler: FieldSkipCompiler
   ) extends CachedSchemaCompiler.DerivingImpl[Encoder]
       with EncoderCompiler {
 
@@ -138,7 +137,7 @@ object Document {
     ): Encoder[A] = {
       val makeEncoder =
         schema.compile(
-          new DocumentEncoderSchemaVisitor(cache, fieldRenderPredicateCompiler)
+          new DocumentEncoderSchemaVisitor(cache, fieldSkipCompiler)
         )
       new Encoder[A] {
         def encode(a: A): Document = {
@@ -147,10 +146,10 @@ object Document {
       }
     }
 
-    def withFieldRenderPredicateCompiler(
-        fieldRenderPredicateCompiler: FieldRenderPredicateCompiler
+    def withFieldSkipCompiler(
+        fieldSkipCompiler: FieldSkipCompiler
     ): EncoderCompiler = new CachedEncoderCompilerImpl(
-      fieldRenderPredicateCompiler
+      fieldSkipCompiler
     )
   }
 

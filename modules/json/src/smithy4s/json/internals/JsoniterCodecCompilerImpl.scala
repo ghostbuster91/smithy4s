@@ -19,7 +19,7 @@ package internals
 
 import smithy4s.HintMask
 import smithy4s.schema._
-import smithy4s.codecs.FieldRenderPredicateCompiler
+import smithy4s.codecs.FieldSkipCompiler
 
 private[smithy4s] case class JsoniterCodecCompilerImpl(
     maxArity: Int,
@@ -29,7 +29,7 @@ private[smithy4s] case class JsoniterCodecCompilerImpl(
     hintMask: Option[HintMask],
     lenientTaggedUnionDecoding: Boolean,
     lenientNumericDecoding: Boolean,
-    fieldRenderPredicateCompiler: FieldRenderPredicateCompiler
+    fieldSkipCompiler: FieldSkipCompiler
 ) extends CachedSchemaCompiler.Impl[JCodec]
     with JsoniterCodecCompiler {
 
@@ -38,21 +38,21 @@ private[smithy4s] case class JsoniterCodecCompilerImpl(
   def withMaxArity(max: Int): JsoniterCodecCompiler = copy(maxArity = max)
 
   @deprecated(
-    message = "Use withFieldRenderPredicateCompiler instead",
+    message = "Use withFieldSkipCompiler instead",
     since = "0.18.30"
   )
   def withExplicitDefaultsEncoding(
       explicitNulls: Boolean
   ): JsoniterCodecCompiler =
-    withFieldRenderPredicateCompiler(
-      if (explicitNulls) FieldRenderPredicateCompiler.NeverSkip
-      else FieldRenderPredicateCompiler.SkipIfEmptyOrDefaultOptionals
+    withFieldSkipCompiler(
+      if (explicitNulls) FieldSkipCompiler.NeverSkip
+      else FieldSkipCompiler.SkipIfEmptyOrDefaultOptionals
     )
 
-  def withFieldRenderPredicateCompiler(
-      fieldRenderPredicateCompiler: FieldRenderPredicateCompiler
+  def withFieldSkipCompiler(
+      fieldSkipCompiler: FieldSkipCompiler
   ): JsoniterCodecCompiler =
-    copy(fieldRenderPredicateCompiler = fieldRenderPredicateCompiler)
+    copy(fieldSkipCompiler = fieldSkipCompiler)
 
   def withHintMask(hintMask: HintMask): JsoniterCodecCompiler =
     copy(hintMask = Some(hintMask))
@@ -85,7 +85,7 @@ private[smithy4s] case class JsoniterCodecCompilerImpl(
       lenientTaggedUnionDecoding,
       lenientNumericDecoding,
       cache,
-      fieldRenderPredicateCompiler
+      fieldSkipCompiler
     )
     val amendedSchema =
       hintMask
@@ -101,8 +101,7 @@ private[smithy4s] object JsoniterCodecCompilerImpl {
   val defaultJsoniterCodecCompiler: JsoniterCodecCompiler =
     JsoniterCodecCompilerImpl(
       maxArity = JsoniterCodecCompiler.defaultMaxArity,
-      fieldRenderPredicateCompiler =
-        FieldRenderPredicateCompiler.SkipIfEmptyOrDefaultOptionals,
+      fieldSkipCompiler = FieldSkipCompiler.SkipIfEmptyOrDefaultOptionals,
       infinitySupport = false,
       flexibleCollectionsSupport = false,
       preserveMapOrder = false,

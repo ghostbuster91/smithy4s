@@ -26,7 +26,7 @@ import smithy4s.example.DefaultNullsOperationOutput
 import alloy.Untagged
 import smithy4s.example.TimestampOperationInput
 import scala.util.Try
-import smithy4s.codecs.FieldRenderPredicateCompiler
+import smithy4s.codecs.FieldSkipCompiler
 
 class DocumentSpec() extends FunSuite {
 
@@ -467,8 +467,8 @@ class DocumentSpec() extends FunSuite {
     "document encoder - all default values + explicit defaults encoding = true"
   ) {
     val result = Document.Encoder
-      .withFieldRenderPredicateCompiler(
-        FieldRenderPredicateCompiler.NeverSkip
+      .withFieldSkipCompiler(
+        FieldSkipCompiler.NeverSkip
       )
       .fromSchema(DefaultNullsOperationOutput.schema)
       .encode(DefaultNullsOperationOutput())
@@ -494,8 +494,8 @@ class DocumentSpec() extends FunSuite {
     "document encoder - all default values + explicit defaults encoding = false"
   ) {
     val result = Document.Encoder
-      .withFieldRenderPredicateCompiler(
-        FieldRenderPredicateCompiler.SkipIfEmptyOrDefaultOptionals
+      .withFieldSkipCompiler(
+        FieldSkipCompiler.SkipIfEmptyOrDefaultOptionals
       )
       .fromSchema(
         DefaultNullsOperationOutput.schema
@@ -516,8 +516,8 @@ class DocumentSpec() extends FunSuite {
     "document encoder - FieldRenderPredicateCompiler.SkipEmptyOptionals and keep defaults"
   ) {
     val result = Document.Encoder
-      .withFieldRenderPredicateCompiler(
-        FieldRenderPredicateCompiler.SkipIfEmptyOptionals
+      .withFieldSkipCompiler(
+        FieldSkipCompiler.SkipIfEmptyOptionals
       )
       .fromSchema(DefaultNullsOperationOutput.schema)
       .encode(DefaultNullsOperationOutput())
@@ -542,8 +542,8 @@ class DocumentSpec() extends FunSuite {
     "document encoder - FieldRenderPredicateCompiler.SkipEmptyOptionals and keep defaults"
   ) {
     val result = Document.Encoder
-      .withFieldRenderPredicateCompiler(
-        FieldRenderPredicateCompiler.SkipIfDefaultOptionals
+      .withFieldSkipCompiler(
+        FieldSkipCompiler.SkipIfDefaultOptionals
       )
       .fromSchema(DefaultNullsOperationOutput.schema)
       .encode(DefaultNullsOperationOutput())
@@ -566,8 +566,8 @@ class DocumentSpec() extends FunSuite {
     "document encoder - default values overrides + explicit defaults encoding = true"
   ) {
     val result = Document.Encoder
-      .withFieldRenderPredicateCompiler(
-        FieldRenderPredicateCompiler.NeverSkip
+      .withFieldSkipCompiler(
+        FieldSkipCompiler.NeverSkip
       )
       .fromSchema(DefaultNullsOperationOutput.schema)
       .encode(
@@ -608,8 +608,8 @@ class DocumentSpec() extends FunSuite {
     "document encoder - default values overrides + explicit defaults encoding = false"
   ) {
     val result = Document.Encoder
-      .withFieldRenderPredicateCompiler(
-        FieldRenderPredicateCompiler.SkipIfEmptyOrDefaultOptionals
+      .withFieldSkipCompiler(
+        FieldSkipCompiler.SkipIfEmptyOrDefaultOptionals
       )
       .fromSchema(DefaultNullsOperationOutput.schema)
       .encode(
@@ -1211,8 +1211,8 @@ class DocumentSpec() extends FunSuite {
     val structSchema = struct(arr)(MyStruct.apply)
 
     val result = Document.Encoder
-      .withFieldRenderPredicateCompiler(
-        FieldRenderPredicateCompiler.NeverSkip
+      .withFieldSkipCompiler(
+        FieldSkipCompiler.NeverSkip
       )
       .fromSchema(structSchema)
       .encode(MyStruct(List.empty))
@@ -1233,8 +1233,8 @@ class DocumentSpec() extends FunSuite {
     val structSchema = struct(arr)(MyStruct.apply)
 
     val result = Document.Encoder
-      .withFieldRenderPredicateCompiler(
-        FieldRenderPredicateCompiler.SkipIfEmptyCollection
+      .withFieldSkipCompiler(
+        FieldSkipCompiler.SkipIfEmptyCollection
       )
       .fromSchema(structSchema)
       .encode(MyStruct(List.empty))
@@ -1253,8 +1253,8 @@ class DocumentSpec() extends FunSuite {
     val structSchema = struct(arr)(MyStruct.apply)
 
     val result = Document.Encoder
-      .withFieldRenderPredicateCompiler(
-        FieldRenderPredicateCompiler.SkipIfEmptyCollection
+      .withFieldSkipCompiler(
+        FieldSkipCompiler.SkipIfEmptyCollection
       )
       .fromSchema(structSchema)
       .encode(MyStruct(Some(List.empty)))
@@ -1273,8 +1273,8 @@ class DocumentSpec() extends FunSuite {
     val structSchema = struct(arr)(MyStruct.apply)
 
     val result = Document.Encoder
-      .withFieldRenderPredicateCompiler(
-        FieldRenderPredicateCompiler.SkipIfEmptyOptionalCollection
+      .withFieldSkipCompiler(
+        FieldSkipCompiler.SkipIfEmptyOptionalCollection
       )
       .fromSchema(structSchema)
       .encode(MyStruct(List.empty))
@@ -1293,8 +1293,8 @@ class DocumentSpec() extends FunSuite {
     val structSchema = struct(arr)(MyStruct.apply)
 
     val result = Document.Encoder
-      .withFieldRenderPredicateCompiler(
-        FieldRenderPredicateCompiler.SkipIfEmptyOptionalCollection
+      .withFieldSkipCompiler(
+        FieldSkipCompiler.SkipIfEmptyOptionalCollection
       )
       .fromSchema(structSchema)
       .encode(MyStruct(Some(List.empty)))

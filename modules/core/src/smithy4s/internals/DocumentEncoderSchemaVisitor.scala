@@ -45,7 +45,7 @@ import smithy4s.schema.Primitive.PDouble
 import smithy4s.schema.Primitive.PLong
 import smithy4s.schema.Primitive.PString
 import alloy.Untagged
-import smithy4s.codecs.FieldRenderPredicateCompiler
+import smithy4s.codecs.FieldSkipCompiler
 
 trait DocumentEncoder[A] { self =>
 
@@ -77,7 +77,7 @@ object DocumentEncoder {
 
 class DocumentEncoderSchemaVisitor(
     val cache: CompilationCache[DocumentEncoder],
-    val fieldRenderPredicateCompiler: FieldRenderPredicateCompiler
+    val fieldSkipCompiler: FieldSkipCompiler
 ) extends SchemaVisitor.Cached[DocumentEncoder] {
   self =>
 
@@ -87,16 +87,16 @@ class DocumentEncoderSchemaVisitor(
   ) =
     this(
       cache,
-      fieldRenderPredicateCompiler =
-        if (explicitDefaultsEncoding) FieldRenderPredicateCompiler.NeverSkip
-        else FieldRenderPredicateCompiler.SkipIfEmptyOrDefaultOptionals
+      fieldSkipCompiler =
+        if (explicitDefaultsEncoding) FieldSkipCompiler.NeverSkip
+        else FieldSkipCompiler.SkipIfEmptyOrDefaultOptionals
     )
 
   def this(cache: CompilationCache[DocumentEncoder]) =
     this(cache, explicitDefaultsEncoding = false)
 
   protected val explicitDefaultsEncoding: Boolean =
-    fieldRenderPredicateCompiler == FieldRenderPredicateCompiler.NeverSkip
+    fieldSkipCompiler == FieldSkipCompiler.NeverSkip
 
   override def primitive[P](
       shapeId: ShapeId,
@@ -233,7 +233,7 @@ class DocumentEncoderSchemaVisitor(
         .get(JsonName)
         .map(_.value)
         .getOrElse(field.label)
-      val shouldSkip = fieldRenderPredicateCompiler.compile(field)
+      val shouldSkip = fieldSkipCompiler.compile(field)
       (s, builder) =>
         val value = field.get(s)
         if (!shouldSkip(value)) {
@@ -245,7 +245,7 @@ class DocumentEncoderSchemaVisitor(
         field: Field[S, A]
     ): (S, Builder[(String, Document), Map[String, Document]]) => Unit = {
       val encoder = apply(field.schema)
-      val shouldSkip = fieldRenderPredicateCompiler.compile(field)
+      val shouldSkip = fieldSkipCompiler.compile(field)
       (s, builder) => {
         val value = field.get(s)
         if (!shouldSkip(value)) {
