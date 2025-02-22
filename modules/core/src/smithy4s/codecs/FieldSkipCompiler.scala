@@ -71,10 +71,10 @@ object FieldSkipCompiler {
     schema match {
       case c: CollectionSchema[f, a] =>
         Some(collection => c.tag.isEmpty(collection.asInstanceOf[f[a]]))
-      case BijectionSchema(inner, _)  => asEmptyCollectionPredicate(inner)
-      case RefinementSchema(inner, _) => asEmptyCollectionPredicate(inner)
+      case BijectionSchema(inner, _)  => asEmptyCollectionPredicate(inner.asInstanceOf[Schema[Any]])
+      case RefinementSchema(inner, _) => asEmptyCollectionPredicate(inner.asInstanceOf[Schema[Any]])
       case OptionSchema(inner) =>
-        asEmptyCollectionPredicate(inner)
+        asEmptyCollectionPredicate(inner.asInstanceOf[Schema[Any]])
           .map(predicate =>
             wrappedCollection =>
               wrappedCollection.asInstanceOf[Option[Any]].exists(predicate)
