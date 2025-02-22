@@ -30,6 +30,11 @@ import smithy4s.codecs.FieldSkipCompiler
 
 class DocumentSpec() extends FunSuite {
 
+  private case class TestCase(
+      expectedToSkip: Boolean,
+      strategy: FieldSkipCompiler
+  )
+
   test("Recursive document codecs should not blow up the stack") {
     val recursive: IntList = IntList(1, Some(IntList(2, Some(IntList(3)))))
 
@@ -1203,106 +1208,126 @@ class DocumentSpec() extends FunSuite {
     )
   }
 
-  test("should render by default required list even if it is empty") {
-    case class MyStruct(
-        items: List[String]
-    )
-    val arr = list(string).required[MyStruct]("items", _.items)
-    val structSchema = struct(arr)(MyStruct.apply)
+  List(
+    TestCase(expectedToSkip = false, FieldSkipCompiler.NeverSkip),
+    TestCase(expectedToSkip = false, FieldSkipCompiler.SkipIfEmptyOptionalCollection),
+    TestCase(expectedToSkip = true, FieldSkipCompiler.SkipIfEmptyCollection)
+  ).foreach { case TestCase(expectedToSkip, strategy) =>
+    val skipNotSkip = if (expectedToSkip) "skip" else "not skip"
+    val expected =
+      if (expectedToSkip) Document.obj()
+      else
+        Document.obj(
+          "items" -> Document.array()
+        )
 
-    val result = Document.Encoder
-      .withFieldSkipCompiler(
-        FieldSkipCompiler.NeverSkip
+    test(s"should ${skipNotSkip} rendering of required lists if it is empty and ${strategy} is used") {
+      case class MyStruct(
+          items: List[String]
       )
-      .fromSchema(structSchema)
-      .encode(MyStruct(List.empty))
+      val arr = list(string).required[MyStruct]("items", _.items)
+      val structSchema = struct(arr)(MyStruct.apply)
 
-    expect.same(
-      Document.obj(
-        "items" -> Document.array()
-      ),
-      result
-    )
+      val result = Document.Encoder
+        .withFieldSkipCompiler(strategy)
+        .fromSchema(structSchema)
+        .encode(MyStruct(List.empty))
+
+      expect.same(expected, result)
+    }
+
   }
 
-  test("should skip rendering of required lists if it is empty and SkipIfEmptyCollection is used") {
-    case class MyStruct(
-        items: List[String]
-    )
-    val arr = list(string).required[MyStruct]("items", _.items)
-    val structSchema = struct(arr)(MyStruct.apply)
+  List(
+    TestCase(expectedToSkip = false, FieldSkipCompiler.NeverSkip),
+    TestCase(expectedToSkip = false, FieldSkipCompiler.SkipIfEmptyOptionalCollection),
+    TestCase(expectedToSkip = true, FieldSkipCompiler.SkipIfEmptyCollection)
+  ).foreach { case TestCase(expectedToSkip, strategy) =>
+    val skipNotSkip = if (expectedToSkip) "skip" else "not skip"
+    val expected =
+      if (expectedToSkip) Document.obj()
+      else
+        Document.obj(
+          "items" -> Document.obj()
+        )
 
-    val result = Document.Encoder
-      .withFieldSkipCompiler(
-        FieldSkipCompiler.SkipIfEmptyCollection
+    test(s"should ${skipNotSkip} rendering of required map if it is empty and ${strategy} is used") {
+      case class MyStruct(
+          items: Map[String, Int]
       )
-      .fromSchema(structSchema)
-      .encode(MyStruct(List.empty))
+      val arr = map(string, int).required[MyStruct]("items", _.items)
+      val structSchema = struct(arr)(MyStruct.apply)
 
-    expect.same(
-      Document.obj(),
-      result
-    )
+      val result = Document.Encoder
+        .withFieldSkipCompiler(strategy)
+        .fromSchema(structSchema)
+        .encode(MyStruct(Map.empty))
+
+      expect.same(
+        result,
+        expected
+      )
+    }
   }
 
-  test("should skip rendering of optional lists if it is empty and SkipIfEmptyCollection is used") {
-    case class MyStruct(
-        items: Option[List[String]]
-    )
-    val arr = list(string).optional[MyStruct]("items", _.items)
-    val structSchema = struct(arr)(MyStruct.apply)
+  List(
+    TestCase(expectedToSkip = false, FieldSkipCompiler.NeverSkip),
+    TestCase(expectedToSkip = true, FieldSkipCompiler.SkipIfEmptyCollection),
+    TestCase(expectedToSkip = true, FieldSkipCompiler.SkipIfEmptyOptionalCollection)
+  ).foreach { case TestCase(expectedToSkip, strategy) =>
+    val skipNotSkip = if (expectedToSkip) "skip" else "not skip"
+    val expected =
+      if (expectedToSkip) Document.obj()
+      else
+        Document.obj(
+          "items" -> Document.obj()
+        )
 
-    val result = Document.Encoder
-      .withFieldSkipCompiler(
-        FieldSkipCompiler.SkipIfEmptyCollection
+    test(s"should ${skipNotSkip} rendering of optional map if it is empty and ${strategy} is used") {
+      case class MyStruct(
+          items: Option[Map[String, Int]]
       )
-      .fromSchema(structSchema)
-      .encode(MyStruct(Some(List.empty)))
+      val arr = map(string, int).optional[MyStruct]("items", _.items)
+      val structSchema = struct(arr)(MyStruct.apply)
 
-    expect.same(
-      Document.obj(),
-      result
-    )
+      val result = Document.Encoder
+        .withFieldSkipCompiler(strategy)
+        .fromSchema(structSchema)
+        .encode(MyStruct(Some(Map.empty)))
+
+      expect.same(result, expected)
+    }
+
   }
 
-  test("should not skip rendering of required lists if it is empty and SkipIfEmptyOptionalCollection is used") {
-    case class MyStruct(
-        items: List[String]
-    )
-    val arr = list(string).required[MyStruct]("items", _.items)
-    val structSchema = struct(arr)(MyStruct.apply)
+  List(
+    TestCase(expectedToSkip = false, FieldSkipCompiler.NeverSkip),
+    TestCase(expectedToSkip = true, FieldSkipCompiler.SkipIfEmptyCollection),
+    TestCase(expectedToSkip = true, FieldSkipCompiler.SkipIfEmptyOptionalCollection)
+  ).foreach { case TestCase(expectedToSkip, strategy) =>
+    val skipNotSkip = if (expectedToSkip) "skip" else "not skip"
+    val expected =
+      if (expectedToSkip) Document.obj()
+      else
+        Document.obj(
+          "items" -> Document.array()
+        )
 
-    val result = Document.Encoder
-      .withFieldSkipCompiler(
-        FieldSkipCompiler.SkipIfEmptyOptionalCollection
+    test(s"should ${skipNotSkip} rendering of optional lists if it is empty and ${strategy} is used") {
+      case class MyStruct(
+          items: Option[List[String]]
       )
-      .fromSchema(structSchema)
-      .encode(MyStruct(List.empty))
+      val arr = list(string).optional[MyStruct]("items", _.items)
+      val structSchema = struct(arr)(MyStruct.apply)
 
-    expect.same(
-      Document.obj("items" -> Document.array()),
-      result
-    )
-  }
+      val result = Document.Encoder
+        .withFieldSkipCompiler(strategy)
+        .fromSchema(structSchema)
+        .encode(MyStruct(Some(List.empty)))
 
-  test("should skip rendering of optional lists if it is empty and SkipIfEmptyOptionalCollection is used") {
-    case class MyStruct(
-        items: Option[List[String]]
-    )
-    val arr = list(string).optional[MyStruct]("items", _.items)
-    val structSchema = struct(arr)(MyStruct.apply)
+      expect.same(result, expected)
+    }
 
-    val result = Document.Encoder
-      .withFieldSkipCompiler(
-        FieldSkipCompiler.SkipIfEmptyOptionalCollection
-      )
-      .fromSchema(structSchema)
-      .encode(MyStruct(Some(List.empty)))
-
-    expect.same(
-      Document.obj(),
-      result
-    )
   }
 
   private def inside[A, B](
