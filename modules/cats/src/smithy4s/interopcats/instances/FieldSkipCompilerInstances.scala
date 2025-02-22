@@ -14,14 +14,23 @@
  *  limitations under the License.
  */
 
-package smithy4s.interopcats
+package smithy4s.interopcats.instances
 
-package object instances {
+import cats._
+import smithy4s.codecs.FieldSkipCompiler
 
-  private[interopcats] object all
-      extends HashInstances
-      with ShowInstances
-      with NullableInstances
-      with FieldSkipCompilerInstances
+private[interopcats] trait FieldSkipCompilerInstances {
+
+  implicit val monoid: Monoid[FieldSkipCompiler] =
+    new Monoid[FieldSkipCompiler] {
+      def empty: FieldSkipCompiler = FieldSkipCompiler.NeverSkip
+      def combine(
+          x: FieldSkipCompiler,
+          y: FieldSkipCompiler
+      ): FieldSkipCompiler =
+        x.combine(y)
+    }
 
 }
+
+object FieldSkipCompilerInstances extends FieldSkipCompilerInstances
