@@ -86,7 +86,7 @@ object FieldSkipCompiler {
           )
       case _: MapSchema[k, v] =>
         Some(collectionA => collectionA.asInstanceOf[Map[k, v]].isEmpty)
-      case LazySchema(_)           => None // ?
+      case LazySchema(suspend)     => asEmptyCollectionPredicate(suspend.value)
       case _: EnumerationSchema[_] => None
       case _: StructSchema[_]      => None
       case _: UnionSchema[_]       => None
