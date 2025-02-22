@@ -19,6 +19,7 @@ package smithy4s
 import smithy.api.JsonName
 import smithy.api.Default
 import smithy4s.example.IntList
+import smithy4s.example.RecursiveListWrapper
 import alloy.Discriminated
 import alloy.JsonUnknown
 import munit._
@@ -1328,6 +1329,21 @@ class DocumentSpec() extends FunSuite {
       expect.same(result, expected)
     }
 
+  }
+
+  test("Recursive document structures shoould not blow up FieldSkipCompiler") {
+    val recursive: RecursiveListWrapper =
+      RecursiveListWrapper(List(RecursiveListWrapper(List(RecursiveListWrapper(List.empty)))))
+
+    val document = Document.Encoder
+      .withFieldSkipCompiler(FieldSkipCompiler.SkipIfEmptyCollection)
+      .fromSchema(RecursiveListWrapper.schema)
+      .encode(recursive)
+    import Document._
+    val expectedDocument =
+      obj("items" -> array(obj("items" -> array(obj()))))
+
+    expect(document == expectedDocument)
   }
 
   private def inside[A, B](
