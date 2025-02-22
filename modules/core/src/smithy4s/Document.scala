@@ -110,9 +110,8 @@ object Document {
     def withExplicitDefaultsEncoding(
         explicitDefaultsEncoding: Boolean
     ): EncoderCompiler = withFieldRenderPredicateCompiler(
-      FieldRenderPredicateCompiler.fromExplicitDefaults(
-        explicitDefaultsEncoding
-      )
+      if (explicitDefaultsEncoding) FieldRenderPredicateCompiler.NeverSkip
+      else FieldRenderPredicateCompiler.SkipIfEmptyOrDefaultOptionals
     )
 
     def withFieldRenderPredicateCompiler(

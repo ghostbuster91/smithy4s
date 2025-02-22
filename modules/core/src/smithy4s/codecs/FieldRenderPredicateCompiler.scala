@@ -43,7 +43,7 @@ object FieldRenderPredicateCompiler {
 
   type ShouldSkip[A] = A => Boolean
 
-  trait OptionalPredicate extends FieldRenderPredicateCompiler {
+  private trait SkipNonRequired extends FieldRenderPredicateCompiler {
 
     final def compile[A](
         field: Field[?, A]
@@ -59,13 +59,14 @@ object FieldRenderPredicateCompiler {
 
   }
 
-  val NeverSkip = new FieldRenderPredicateCompiler {
-    def compile[A](field: Field[_, A]): ShouldSkip[A] = Function.const(false)
-  }
+  val NeverSkip: FieldRenderPredicateCompiler =
+    new FieldRenderPredicateCompiler {
+      def compile[A](field: Field[_, A]): ShouldSkip[A] = Function.const(false)
+    }
 
-  private def asEmptyCollectionPredicate[F[_]](
-      schema: Schema[_]
-  ): Option[Any => Boolean] = {
+  private def asEmptyCollectionPredicate[F[_], A](
+      schema: Schema[A]
+  ): Option[A => Boolean] = {
     import Schema._
     schema match {
       case c: CollectionSchema[f, a] =>
@@ -87,8 +88,8 @@ object FieldRenderPredicateCompiler {
     }
   }
 
-  val SkipIfEmptyOptionalCollection =
-    new FieldRenderPredicateCompiler.OptionalPredicate {
+  val SkipIfEmptyOptionalCollection: FieldRenderPredicateCompiler =
+    new FieldRenderPredicateCompiler.SkipNonRequired {
 
       def compileOptional[A](field: Field[?, A]): ShouldSkip[A] = {
         asEmptyCollectionPredicate(field.schema) match {
@@ -98,38 +99,32 @@ object FieldRenderPredicateCompiler {
       }
     }
 
-  val SkipIfEmptyCollection = new FieldRenderPredicateCompiler {
+  val SkipIfEmptyCollection: FieldRenderPredicateCompiler =
+    new FieldRenderPredicateCompiler {
 
-    def compile[A](field: Field[_, A]): ShouldSkip[A] = {
-      asEmptyCollectionPredicate(field.schema) match {
-        case None          => Function.const(false)
-        case Some(isEmpty) => isEmpty
+      def compile[A](field: Field[_, A]): ShouldSkip[A] = {
+        asEmptyCollectionPredicate(field.schema) match {
+          case None          => Function.const(false)
+          case Some(isEmpty) => isEmpty
+        }
       }
     }
-  }
 
-  val SkipIfDefaultOptionals =
-    new FieldRenderPredicateCompiler.OptionalPredicate {
+  val SkipIfDefaultOptionals: FieldRenderPredicateCompiler =
+    new FieldRenderPredicateCompiler.SkipNonRequired {
       def compileOptional[A](field: Field[?, A]): ShouldSkip[A] = {
         // Optional fields have None as their default, so we need to make sure not to skip them here
         a => a != None && field.isDefaultValue(a)
       }
     }
 
-  val SkipIfEmptyOptionals =
-    new FieldRenderPredicateCompiler.OptionalPredicate {
+  val SkipIfEmptyOptionals: FieldRenderPredicateCompiler =
+    new FieldRenderPredicateCompiler.SkipNonRequired {
       def compileOptional[A](field: Field[?, A]): ShouldSkip[A] = { a =>
         a == None
       }
     }
 
-  val SkipIfEmptyOrDefaultOptionals =
+  val SkipIfEmptyOrDefaultOptionals: FieldRenderPredicateCompiler =
     SkipIfEmptyOptionals combine SkipIfDefaultOptionals
-
-  def fromExplicitDefaults(
-      explicitDefaultsEncoding: Boolean
-  ): FieldRenderPredicateCompiler = {
-    if (explicitDefaultsEncoding) NeverSkip
-    else SkipIfEmptyOrDefaultOptionals
-  }
 }

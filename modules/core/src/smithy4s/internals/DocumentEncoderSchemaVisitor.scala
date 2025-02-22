@@ -88,9 +88,8 @@ class DocumentEncoderSchemaVisitor(
     this(
       cache,
       fieldRenderPredicateCompiler =
-        FieldRenderPredicateCompiler.fromExplicitDefaults(
-          explicitDefaultsEncoding
-        )
+        if (explicitDefaultsEncoding) FieldRenderPredicateCompiler.NeverSkip
+        else FieldRenderPredicateCompiler.SkipIfEmptyOrDefaultOptionals
     )
 
   def this(cache: CompilationCache[DocumentEncoder]) =
