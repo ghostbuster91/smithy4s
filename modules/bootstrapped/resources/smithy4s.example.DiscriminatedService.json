@@ -54,48 +54,28 @@
             "TestBiggerUnion": {
                 "oneOf": [
                     {
-                        "$ref": "#/components/schemas/TestBiggerUnionOne"
+                        "type": "object",
+                        "title": "one",
+                        "properties": {
+                            "one": {
+                                "$ref": "#/components/schemas/One"
+                            }
+                        },
+                        "required": [
+                            "one"
+                        ]
                     },
                     {
-                        "$ref": "#/components/schemas/TestBiggerUnionTwo"
-                    }
-                ],
-                "discriminator": {
-                    "propertyName": "tpe",
-                    "mapping": {
-                        "one": "#/components/schemas/TestBiggerUnionOne",
-                        "two": "#/components/schemas/TestBiggerUnionTwo"
-                    }
-                }
-            },
-            "TestBiggerUnionMixin": {
-                "type": "object",
-                "properties": {
-                    "tpe": {
-                        "type": "string"
-                    }
-                },
-                "required": [
-                    "tpe"
-                ]
-            },
-            "TestBiggerUnionOne": {
-                "allOf": [
-                    {
-                        "$ref": "#/components/schemas/One"
-                    },
-                    {
-                        "$ref": "#/components/schemas/TestBiggerUnionMixin"
-                    }
-                ]
-            },
-            "TestBiggerUnionTwo": {
-                "allOf": [
-                    {
-                        "$ref": "#/components/schemas/Two"
-                    },
-                    {
-                        "$ref": "#/components/schemas/TestBiggerUnionMixin"
+                        "type": "object",
+                        "title": "two",
+                        "properties": {
+                            "two": {
+                                "$ref": "#/components/schemas/Two"
+                            }
+                        },
+                        "required": [
+                            "two"
+                        ]
                     }
                 ]
             },

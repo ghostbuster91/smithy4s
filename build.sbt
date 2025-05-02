@@ -17,6 +17,7 @@ ThisBuild / dynverSeparator := "-"
 ThisBuild / versionScheme := Some("early-semver")
 ThisBuild / mimaBaseVersion := "0.18.0"
 ThisBuild / resolvers += "Sonatype OSS Snapshots" at "https://s01.oss.sonatype.org/content/repositories/snapshots"
+ThisBuild / resolvers += Resolver.mavenLocal
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
 

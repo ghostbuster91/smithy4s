@@ -149,6 +149,7 @@ trait Smithy4sModule extends ScalaModule {
 
   override def repositoriesTask: Task[Seq[Repository]] = T.task {
     Seq(
+      MavenRepository("file://" + os.home / ".m2" / "repository"),
       MavenRepository(
         "https://s01.oss.sonatype.org/content/repositories/snapshots"
       )

@@ -36,7 +36,7 @@ private[codegen] object CodegenImpl { self =>
     val smithyBuild = args.smithyBuild
       .map(os.read)
       .map(SmithyBuild.readJson(_))
-    val (classloader, model): (ClassLoader, Model) = internals.ModelLoader.load(
+    val (_, model): (ClassLoader, Model) = internals.ModelLoader.load(
       args.specs.map(_.toIO).toSet,
       args.dependencies,
       args.repositories,
@@ -90,9 +90,7 @@ private[codegen] object CodegenImpl { self =>
         .convertWithConfig(
           model,
           Some(openApiNamespaces).filter(_ != allNamespaces),
-          openApiConfig,
-          classloader
-        )
+          openApiConfig)
         .map { case OpenApiConversionResult(_, serviceId, outputString) =>
           val name = serviceId.getNamespace() + "." + serviceId.getName()
           val openapiFile = (args.resourceOutput / (name + ".json"))
