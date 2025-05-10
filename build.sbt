@@ -63,6 +63,7 @@ lazy val allModules = Seq(
   docs,
   millCodegenPlugin,
   json,
+  circe,
   xml,
   bootstrapped,
   tests,
@@ -695,6 +696,24 @@ lazy val json = projectMatrix
     isMimaEnabled := true,
     libraryDependencies ++= Seq(
       Dependencies.Jsoniter.core.value
+    ),
+    libraryDependencies ++= munitDeps.value
+  )
+  .jvmPlatform(allJvmScalaVersions, jvmDimSettings)
+  .jsPlatform(allJsScalaVersions, jsDimSettings)
+  .nativePlatform(allNativeScalaVersions, nativeDimSettings)
+
+lazy val circe = projectMatrix
+  .in(file("modules/circe"))
+  .dependsOn(
+    core,
+    bootstrapped % "test->test",
+    scalacheck % "test -> compile"
+  )
+  .settings(
+    isMimaEnabled := true,
+    libraryDependencies ++= Seq(
+      Dependencies.Circe.core.value
     ),
     libraryDependencies ++= munitDeps.value
   )
