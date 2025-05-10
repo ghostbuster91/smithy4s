@@ -13,8 +13,10 @@ import smithy4s.{Bijection, Hints, Lazy, Refinement, ShapeId}
 
 import smithy4s.capability.EncoderK
 
-class CirceSchemaVisitor(val cache: CompilationCache[Codec])
-    extends SchemaVisitor.Cached[Codec] { self =>
+private[smithy4s] class CirceSchemaVisitor(
+    maxArity: Int,
+    val cache: CompilationCache[Codec]
+) extends SchemaVisitor.Cached[Codec] { self =>
 
   override def primitive[P](
       shapeId: ShapeId,
@@ -61,13 +63,13 @@ class CirceSchemaVisitor(val cache: CompilationCache[Codec])
   ): Codec[C[A]] =
     tag match {
       case CollectionTag.ListTag =>
-        CollectionCirceCodecs.listCodec(member.compile(this))
+        CollectionCirceCodecs.listCodec(member.compile(this), maxArity)
       case CollectionTag.VectorTag =>
-        CollectionCirceCodecs.vectorCodec(member.compile(this))
+        CollectionCirceCodecs.vectorCodec(member.compile(this), maxArity)
       case CollectionTag.SetTag =>
-        CollectionCirceCodecs.setCodec(member.compile(this))
+        CollectionCirceCodecs.setCodec(member.compile(this), maxArity)
       case CollectionTag.IndexedSeqTag =>
-        CollectionCirceCodecs.indexedSeqCodec(member.compile(this))
+        CollectionCirceCodecs.indexedSeqCodec(member.compile(this), maxArity)
     }
 
   override def option[A](schema: Schema[A]): Codec[Option[A]] = {

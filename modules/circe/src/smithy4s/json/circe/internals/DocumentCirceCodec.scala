@@ -4,7 +4,7 @@ import smithy4s.Document
 import smithy4s.Document.{Encoder => _, Decoder => _, _}
 import io.circe._
 
-object DocumentCirceCodec {
+private[smithy4s] object DocumentCirceCodec {
 
   val documentToJson: Document => Json = {
     case DNull           => Json.Null

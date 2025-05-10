@@ -2,7 +2,7 @@ package smithy4s.json.circe.internals
 
 import io.circe._
 
-object CollectionCirceCodecs {
+private[smithy4s] object CollectionCirceCodecs {
 
   def withMaxArity[A, C[_]](
       decoder: Decoder[List[A]],
@@ -20,7 +20,7 @@ object CollectionCirceCodecs {
     Encoder.instance(ca => encoder(fromC(ca)))
   )
 
-  def listCodec[A](implicit a: Codec[A], maxArity: Int = 256): Codec[List[A]] =
+  def listCodec[A](a: Codec[A], maxArity: Int): Codec[List[A]] =
     withMaxArity[A, List](
       Decoder.decodeList(a),
       Encoder.encodeList(a),
@@ -30,10 +30,7 @@ object CollectionCirceCodecs {
       "List"
     )
 
-  def vectorCodec[A](implicit
-      a: Codec[A],
-      maxArity: Int = 256
-  ): Codec[Vector[A]] =
+  def vectorCodec[A](a: Codec[A], maxArity: Int): Codec[Vector[A]] =
     withMaxArity[A, Vector](
       Decoder.decodeList(a),
       Encoder.encodeList(a),
@@ -43,9 +40,9 @@ object CollectionCirceCodecs {
       "Vector"
     )
 
-  def indexedSeqCodec[A](implicit
+  def indexedSeqCodec[A](
       a: Codec[A],
-      maxArity: Int = 256
+      maxArity: Int
   ): Codec[IndexedSeq[A]] =
     withMaxArity[A, IndexedSeq](
       Decoder.decodeList(a),
@@ -56,7 +53,7 @@ object CollectionCirceCodecs {
       "IndexedSeq"
     )
 
-  def setCodec[A](implicit a: Codec[A], maxArity: Int = 256): Codec[Set[A]] =
+  def setCodec[A](a: Codec[A], maxArity: Int): Codec[Set[A]] =
     withMaxArity[A, Set](
       Decoder.decodeList(a),
       Encoder.encodeList(a),
