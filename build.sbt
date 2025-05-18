@@ -62,6 +62,7 @@ lazy val allModules = Seq(
   codegen,
   docs,
   millCodegenPlugin,
+  millCodegenPlugin_3,
   json,
   xml,
   bootstrapped,
@@ -575,7 +576,34 @@ lazy val millCodegenPlugin = projectMatrix
   )
   .customRows(
     Scala213,
-    millVersions.map { mv =>
+    millVersions_2.map { mv =>
+      MillCustomRow(mv)
+    }: _*
+  )
+  .dependsOn(codegen)
+
+lazy val millCodegenPlugin_3 = projectMatrix
+  .in(file("modules/mill-codegen-plugin"))
+  .settings(
+    name := "mill-codegen-plugin",
+    simpleJVMLayout,
+    libraryDependencySchemes += "com.lihaoyi" %% "geny" % VersionScheme.Always,
+    publishLocal := {
+      val _ = List(
+        (`aws-kernel`.jvm(Scala3) / publishLocal).value,
+        (core.jvm(Scala3) / publishLocal).value,
+        (dynamic.jvm(Scala3) / publishLocal).value,
+        (codegen.jvm(Scala3) / publishLocal).value,
+        (protocolJvm / publishLocal).value
+      )
+      publishLocal.value
+    },
+    Test / test := (Test / test).dependsOn(publishLocal).value,
+    libraryDependencies ++= munitDeps.value
+  )
+  .customRows(
+    Scala3,
+    millVersions_3.map { mv =>
       MillCustomRow(mv)
     }: _*
   )

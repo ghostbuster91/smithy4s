@@ -349,82 +349,82 @@ class Smithy4sModuleSpec extends munit.FunSuite {
     }
   }
 
-  // test("multi-module staged codegen works") {
-  //
-  //   val localIvyRepo = os.temp.dir() / ".ivy2" / "local"
-  //
-  //   trait Base
-  //       extends testKit.BaseModule
-  //       with SbtModule
-  //       with Smithy4sModule
-  //       with PublishModule {
-  //     override def scalaVersion = "2.13.16"
-  //     override def repositoriesTask: Task[Seq[Repository]] = T.task {
-  //       val ivy2Local = IvyRepository.fromPattern(
-  //         (localIvyRepo.toNIO.toUri.toString + "/") +: coursier.ivy.Pattern.default,
-  //         dropInfoAttributes = true
-  //       )
-  //       Seq(ivy2Local) ++ super.repositoriesTask()
-  //     }
-  //     def pomSettings: T[PomSettings] = PomSettings(
-  //       "foo",
-  //       "foobar",
-  //       "http://foobar",
-  //       Seq.empty,
-  //       VersionControl(),
-  //       Seq.empty
-  //     )
-  //     def publishVersion: T[String] = "0.0.1-SNAPSHOT"
-  //
-  //   }
-  //
-  //   object foo extends Base {
-  //     override def artifactName: T[String] = "foo-mill"
-  //     override def scalaVersion = "2.13.16"
-  //     override def ivyDeps = Agg(coreDep)
-  //     override def smithy4sAllowedNamespaces: T[Option[Set[String]]] =
-  //       Some(Set("aws.api", "foo"))
-  //     override def millSourcePath = resourcePath / "multimodule-staged" / "foo"
-  //     // foo refers to smithy-aws-traits explicitly as a code-gen only dep, and upon publishing,
-  //     // this information is stored in the manifest of bar's jar, for downstream consumption
-  //     override def smithy4sIvyDeps = Agg(
-  //       ivy"software.amazon.smithy:smithy-aws-traits:${smithy4s.codegen.BuildInfo.smithyVersion}"
-  //     )
-  //   }
-  //
-  //   object bar extends Base {
-  //     override def artifactName: T[String] = "bar-mill"
-  //     override def scalaVersion = "2.13.16"
-  //     // bar depend on foo as a library, and an assumption is made that bar may depend on the same smithy models
-  //     // that foo depended on for its own codegen. Therefore, these are retrieved from foo's manifest,
-  //     // resolved and added to the list of jars to seek smithy models from during code generation
-  //     override def ivyDeps = T {
-  //       super.ivyDeps() ++ Agg(
-  //         ivy"${pomSettings().organization}::foo-mill:${publishVersion()}"
-  //       )
-  //     }
-  //     override def millSourcePath = resourcePath / "multimodule-staged" / "bar"
-  //   }
-  //
-  //   val fooEv =
-  //     testKit.staticTestEvaluator(foo)(FullName("multi-module-staged-foo"))
-  //   val barEv =
-  //     testKit.staticTestEvaluator(bar)(FullName("multi-module-staged-bar"))
-  //
-  //   taskWorks(foo.publishLocal(localIvyRepo.toString()), fooEv)
-  //   taskWorks(bar.compile, barEv)
-  //
-  //   checkFileExist(
-  //     barEv.outPath / "smithy4sOutputDir.dest" / "scala" / "bar" / "Bar.scala",
-  //     shouldExist = true
-  //   )
-  //   checkFileExist(
-  //     barEv.outPath / "smithy4sOutputDir.dest" / "scala" / "foo" / "Foo.scala",
-  //     shouldExist = false
-  //   )
-  //
-  // }
-  //
+  test("multi-module staged codegen works") {
+
+    val localIvyRepo = os.temp.dir() / ".ivy2" / "local"
+
+    trait Base
+        extends testKit.BaseModule
+        with SbtModule
+        with Smithy4sModule
+        with PublishModule {
+      override def scalaVersion = "2.13.16"
+      override def repositoriesTask: Task[Seq[Repository]] = T.task {
+        val ivy2Local = IvyRepository.fromPattern(
+          (localIvyRepo.toNIO.toUri.toString + "/") +: coursier.ivy.Pattern.default,
+          dropInfoAttributes = true
+        )
+        Seq(ivy2Local) ++ super.repositoriesTask()
+      }
+      def pomSettings: T[PomSettings] = PomSettings(
+        "foo",
+        "foobar",
+        "http://foobar",
+        Seq.empty,
+        VersionControl(),
+        Seq.empty
+      )
+      def publishVersion: T[String] = "0.0.1-SNAPSHOT"
+
+    }
+
+    object foo extends Base {
+      override def artifactName: T[String] = "foo-mill"
+      override def scalaVersion = "2.13.16"
+      override def ivyDeps = Agg(coreDep)
+      override def smithy4sAllowedNamespaces: T[Option[Set[String]]] =
+        Some(Set("aws.api", "foo"))
+      override def millSourcePath = resourcePath / "multimodule-staged" / "foo"
+      // foo refers to smithy-aws-traits explicitly as a code-gen only dep, and upon publishing,
+      // this information is stored in the manifest of bar's jar, for downstream consumption
+      override def smithy4sIvyDeps = Agg(
+        ivy"software.amazon.smithy:smithy-aws-traits:${smithy4s.codegen.BuildInfo.smithyVersion}"
+      )
+    }
+
+    object bar extends Base {
+      override def artifactName: T[String] = "bar-mill"
+      override def scalaVersion = "2.13.16"
+      // bar depend on foo as a library, and an assumption is made that bar may depend on the same smithy models
+      // that foo depended on for its own codegen. Therefore, these are retrieved from foo's manifest,
+      // resolved and added to the list of jars to seek smithy models from during code generation
+      override def ivyDeps = T {
+        super.ivyDeps() ++ Agg(
+          ivy"${pomSettings().organization}::foo-mill:${publishVersion()}"
+        )
+      }
+      override def millSourcePath = resourcePath / "multimodule-staged" / "bar"
+    }
+
+    val fooEv =
+      testKit.staticTestEvaluator(foo)(FullName("multi-module-staged-foo"))
+    val barEv =
+      testKit.staticTestEvaluator(bar)(FullName("multi-module-staged-bar"))
+
+    taskWorks(foo.publishLocal(localIvyRepo.toString()), fooEv)
+    taskWorks(bar.compile, barEv)
+
+    checkFileExist(
+      barEv.outPath / "smithy4sOutputDir.dest" / "scala" / "bar" / "Bar.scala",
+      shouldExist = true
+    )
+    checkFileExist(
+      barEv.outPath / "smithy4sOutputDir.dest" / "scala" / "foo" / "Foo.scala",
+      shouldExist = false
+    )
+
+  }
+
   test("codegen with aws specs") {
     object foo extends TestBaseModule with Smithy4sModule {
       override def scalaVersion = "2.13.16"

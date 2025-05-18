@@ -49,14 +49,13 @@ case class MillCustomRow(mv: String) extends CustomRow {
         .binaryWith(s"mill${Smithy4sBuildPlugin.millPlatform(mv)}_", ""),
       libraryDependencies ++= Seq(
         Dependencies.Mill.main(mv),
-        Dependencies.Mill.mainApi(mv),
         Dependencies.Mill.scalalib(mv),
         Dependencies.Mill.mainTestkit(mv)
-      ),
+      ) ++ Dependencies.Mill.mainApi(mv),
       Compile / unmanagedSourceDirectories +=
         (Compile / sourceDirectory).value.getParentFile.getParentFile / s"src-mill-${suffix}",
       Test / unmanagedSourceDirectories +=
-        (Test / sourceDirectory).value.getParentFile.getParentFile / "test"/ s"src-mill-${suffix}"
+        (Test / sourceDirectory).value.getParentFile.getParentFile / "test" / s"src-mill-${suffix}"
     )
   }
 
@@ -656,11 +655,13 @@ object Smithy4sBuildPlugin extends AutoPlugin {
       .settings(jsDimSettings)
   }
 
-  val millVersions = List("0.11.13", "0.12.11")
+  val millVersions_2 = List("0.11.13", "0.12.11")
+  val millVersions_3 = List("0.13.0-M1")
 
   def millPlatform(millVersion: String): String = millVersion match {
     case mv if mv.startsWith("0.12") => "0.12"
     case mv if mv.startsWith("0.11") => "0.11"
+    case mv if mv.startsWith("0.13") => "0.13"
     case _                           => sys.error("Unsupported mill platform.")
   }
 
