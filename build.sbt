@@ -601,8 +601,18 @@ lazy val millCodegenPlugin_3 = projectMatrix
     Test / test := (Test / test).dependsOn(publishLocal).value,
     libraryDependencies ++= munitDeps.value
   )
+  .settings(
+    excludeDependencies ++= Seq(
+      "org.scala-lang.modules" % "scala-collection-compat_2.13",
+      "org.scala-lang.modules" % "scala-xml_2.13"
+    ),
+    dependencyOverrides ++= Seq(
+      "org.scala-lang.modules" %% "scala-collection-compat" % "2.12.0",
+      "org.scala-lang.modules" %% "scala-xml" % "2.2.0"
+    )
+  )
   .customRows(
-    Scala3,
+    "3.6.4",
     millVersions_3.map { mv =>
       MillCustomRow(mv)
     }: _*
