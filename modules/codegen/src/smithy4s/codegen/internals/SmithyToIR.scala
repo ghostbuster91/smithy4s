@@ -65,9 +65,25 @@ private[codegen] object SmithyToIR {
       namespace: String
   ): CompilationUnit = {
     val smithyToIR = new SmithyToIR(model, namespace)
-    PostProcessor(
-      CompilationUnit(namespace, smithyToIR.allDecls, smithyToIR.rendererConfig)
+    val localConfig = PackageConfig.load(model.getMetadata().asScala.toMap)
+    // Collect rendered-package mappings from upstream smithy4sGenerated manifests so
+    // that Type.Ref nodes referencing already-generated namespaces resolve to the
+    // correct Scala package name even across jar boundaries.
+    val upstreamMappings: Map[String, String] =
+      CodegenRecord
+        .recordsFromModel(model)
+        .map(_.renderedPackages)
+        .foldLeft(Map.empty[String, String])(_ ++ _)
+    // Local mappings (from this module's smithy4sCodegen metadata) take precedence.
+    val packageConfig =
+      localConfig.copy(mappings = upstreamMappings ++ localConfig.mappings)
+    val raw = CompilationUnit(
+      namespace,
+      smithyToIR.allDecls,
+      smithyToIR.rendererConfig,
+      packageConfig
     )
+    PackageRemapper(PostProcessor(raw))
   }
 
   private[codegen] def prettifyName(
